@@ -31,10 +31,9 @@ public class PublixAccessLoggingAction extends Action<PublixAccessLogging> {
 
 	private final ALogger logger = Logger.of("publix_access");
 
-	public CompletionStage<Result> call(Http.Context ctx) {
-		final Request request = ctx.request();
+	public CompletionStage<Result> call(Request request) {
 		logger.info(request.method() + " " + request.uri());
-		return delegate.call(ctx);
+		return delegate.call(request);
 	}
 
 }

@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   "org.easytesting" % "fest-assert" % "1.4" % "test",
   "com.h2database" % "h2" % "1.4.193",
   "com.typesafe.play" %% "play-json" % "2.7.2",
+  "org.apache.commons" % "commons-lang3" % "3.9",
   guice,
   filters
 )

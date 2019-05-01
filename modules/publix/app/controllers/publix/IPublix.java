@@ -1,6 +1,7 @@
 package controllers.publix;
 
 import exceptions.publix.PublixException;
+import play.mvc.Http;
 import play.mvc.Result;
 
 import java.io.IOException;
@@ -23,7 +24,7 @@ public interface IPublix {
      * Starts the study within a batch. Then automatically starts it's first
      * component.
      */
-    Result startStudy(Long studyId, Long batchId) throws PublixException;
+    Result startStudy(Http.Request request, Long studyId, Long batchId) throws PublixException;
 
     /**
      * HTTP type: Normal GET request
@@ -31,8 +32,7 @@ public interface IPublix {
      * Starts the component with the given componentId that belongs to the study
      * with the studyId.
      */
-    Result startComponent(Long studyId, Long componentId, Long studyResultId)
-            throws PublixException;
+    Result startComponent(Long studyId, Long componentId, Long studyResultId) throws PublixException;
 
     /**
      * HTTP type: Normal GET request
@@ -40,8 +40,7 @@ public interface IPublix {
      * Starts the component in the given position that belongs to the study with
      * the studyId.
      */
-    Result startComponentByPosition(Long studyId, Integer position,
-            Long studyResultId) throws PublixException;
+    Result startComponentByPosition(Long studyId, Integer position, Long studyResultId) throws PublixException;
 
     /**
      * Deprecated!
@@ -52,8 +51,7 @@ public interface IPublix {
      * current one. If there are no more components in the study, the study will
      * be finished successfully.
      */
-    Result startNextComponent(Long studyId, Long studyResultId)
-            throws PublixException;
+    Result startNextComponent(Long studyId, Long studyResultId) throws PublixException;
 
     /**
      * HTTP type: Ajax GET request
@@ -65,8 +63,7 @@ public interface IPublix {
      * by the study running in the browser. The study session data are different
      * from Play's session and stored within the study results.
      */
-    Result getInitData(Long studyId, Long componentId, Long studyResultId)
-            throws PublixException, IOException;
+    Result getInitData(Long studyId, Long componentId, Long studyResultId) throws PublixException, IOException;
 
     /**
      * HTTP type: Ajax POST request
@@ -77,8 +74,7 @@ public interface IPublix {
      * browser. The study session data are different from Play's session and
      * stored within the study results.
      */
-    Result setStudySessionData(Long studyId, Long studyResultId)
-            throws PublixException;
+    Result setStudySessionData(Long studyId, Long studyResultId) throws PublixException;
 
     /**
      * HTTP type: Ajax POST request
@@ -95,8 +91,7 @@ public interface IPublix {
      * Persists the submitted data in the ComponentResult specified by the given
      * study and component ID. Already submitted data will be overwritten.
      */
-    Result submitResultData(Long studyId, Long componentId, Long studyResultId)
-            throws PublixException;
+    Result submitResultData(Long studyId, Long componentId, Long studyResultId) throws PublixException;
 
     /**
      * HTTP type: Ajax POST request
@@ -104,8 +99,7 @@ public interface IPublix {
      * Appends the submitted data to the already stored result data in the
      * ComponentResult specified by the given study and component ID.
      */
-    Result appendResultData(Long studyId, Long componentId, Long studyResultId)
-            throws PublixException;
+    Result appendResultData(Long studyId, Long componentId, Long studyResultId) throws PublixException;
 
     /**
      * HTTP type: Ajax GET request
@@ -114,8 +108,8 @@ public interface IPublix {
      * Optionally it can be specified whether the component was successful and
      * and error message.
      */
-    Result finishComponent(Long studyId, Long componentId, Long studyResultId,
-            Boolean successful, String errorMsg) throws PublixException;
+    Result finishComponent(Long studyId, Long componentId, Long studyResultId, Boolean successful, String errorMsg)
+            throws PublixException;
 
     /**
      * HTTP type: Normal or Ajax GET request
@@ -124,8 +118,7 @@ public interface IPublix {
      * Optionally a message can be given describing the reasons for the
      * abortion.
      */
-    Result abortStudy(Long studyId, Long studyResultId, String message)
-            throws PublixException;
+    Result abortStudy(Http.Request request, Long studyId, Long studyResultId, String message) throws PublixException;
 
     /**
      * HTTP type: Normal or Ajax GET request
@@ -134,15 +127,14 @@ public interface IPublix {
      * or FAIL). Optionally it can be specified whether the study was successful
      * and an error message.
      */
-    Result finishStudy(Long studyId, Long studyResultId, Boolean successful,
-            String errorMsg) throws PublixException;
+    Result finishStudy(Http.Request request, Long studyId, Long studyResultId, Boolean successful, String errorMsg)
+            throws PublixException;
 
     /**
      * HTTP type: Ajax POST request
      * <p>
      * With this method the client side can log into the server's log.
      */
-    Result log(Long studyId, Long componentId, Long studyResultId)
-            throws PublixException;
+    Result log(Long studyId, Long componentId, Long studyResultId) throws PublixException;
 
 }

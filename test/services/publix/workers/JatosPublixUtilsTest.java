@@ -72,11 +72,10 @@ public class JatosPublixUtilsTest extends PublixUtilsTest<JatosWorker> {
     }
 
     @Test
-    public void checkRetrieveJatosRunFromSession()
+    public void checkRetrieveJatosRunFromSession(Http.Request request)
             throws ForbiddenPublixException, BadRequestPublixException {
         testHelper.mockContext();
-        Http.Context.current().session().put(JatosPublix.SESSION_JATOS_RUN,
-                JatosRun.RUN_STUDY.name());
+        request.session().put(JatosPublix.SESSION_JATOS_RUN, JatosRun.RUN_STUDY.name());
 
         JatosRun jatosRun = jatosPublixUtils.retrieveJatosRunFromSession();
 
@@ -103,11 +102,11 @@ public class JatosPublixUtilsTest extends PublixUtilsTest<JatosWorker> {
 
         // Put URL query parameters in the Context
         Map<String, String[]> queryString = new HashMap<>();
-        queryString.put("foo", new String[]{"bar"});
-        queryString.put("para2", new String[]{"1234567890"});
-        queryString.put("para3", new String[]{"i%20like%20gizmodo"});
-        queryString.put(JatosPublix.JATOS_WORKER_ID, new String[]{"123"});
-        queryString.put("batchId", new String[]{"3"});
+        queryString.put("foo", new String[] { "bar" });
+        queryString.put("para2", new String[] { "1234567890" });
+        queryString.put("para3", new String[] { "i%20like%20gizmodo" });
+        queryString.put(JatosPublix.JATOS_WORKER_ID, new String[] { "123" });
+        queryString.put("batchId", new String[] { "3" });
         testHelper.mockContext(queryString);
 
         jpaApi.withTransaction(() -> {

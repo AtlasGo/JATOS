@@ -26,6 +26,7 @@ import play.data.FormFactory;
 import play.db.jpa.Transactional;
 import play.libs.F.Function3;
 import play.mvc.Controller;
+import play.mvc.Http;
 import play.mvc.Result;
 import services.gui.*;
 import utils.common.HttpUtils;
@@ -52,18 +53,18 @@ public class Batches extends Controller {
     private static final ALogger LOGGER = Logger.of(Batches.class);
 
     private final JatosGuiExceptionThrower jatosGuiExceptionThrower;
-    private final Checker checker;
-    private final JsonUtils jsonUtils;
-    private final AuthenticationService authenticationService;
-    private final WorkerService workerService;
-    private final BatchService batchService;
-    private final GroupService groupService;
-    private final BreadcrumbsService breadcrumbsService;
-    private final StudyDao studyDao;
-    private final BatchDao batchDao;
-    private final StudyResultDao studyResultDao;
-    private final GroupResultDao groupResultDao;
-    private final FormFactory formFactory;
+    private final Checker                  checker;
+    private final JsonUtils                jsonUtils;
+    private final AuthenticationService    authenticationService;
+    private final WorkerService            workerService;
+    private final BatchService             batchService;
+    private final GroupService             groupService;
+    private final BreadcrumbsService       breadcrumbsService;
+    private final StudyDao                 studyDao;
+    private final BatchDao                 batchDao;
+    private final StudyResultDao           studyResultDao;
+    private final GroupResultDao           groupResultDao;
+    private final FormFactory              formFactory;
 
     @Inject
     Batches(JatosGuiExceptionThrower jatosGuiExceptionThrower, Checker checker,
@@ -92,22 +93,20 @@ public class Batches extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result workerAndBatchManager(Long studyId) throws JatosGuiException {
+    public Result workerAndBatchManager(Http.Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwStudy(e, studyId);
+            jatosGuiExceptionThrower.throwStudy(request, e, studyId);
         }
 
-        int allWorkersSize =
-                study.getBatchList().stream().mapToInt(b -> b.getWorkerList().size()).sum();
-        String breadcrumbs = breadcrumbsService.generateForStudy(study,
-                BreadcrumbsService.WORKER_AND_BATCH_MANAGER);
-        URL jatosURL = HttpUtils.getHostUrl();
+        int allWorkersSize = study.getBatchList().stream().mapToInt(b -> b.getWorkerList().size()).sum();
+        String breadcrumbs = breadcrumbsService.generateForStudy(study, BreadcrumbsService.WORKER_AND_BATCH_MANAGER);
+        URL jatosURL = HttpUtils.getHostUrl(request);
         return ok(views.html.gui.workerAndBatch.workerAndBatchManager.render(loggedInUser,
-                breadcrumbs, HttpUtils.isLocalhost(), study, jatosURL, allWorkersSize));
+                breadcrumbs, HttpUtils.isLocalhost(request), study, jatosURL, allWorkersSize));
     }
 
     /**
@@ -308,7 +307,6 @@ public class Batches extends Controller {
         return ok(" "); // jQuery.ajax cannot handle empty responses
     }
 
-
     /**
      * Ajax GET request to get BatchProperties as JSON
      */
@@ -334,7 +332,7 @@ public class Batches extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitEditedProperties(Long studyId, Long batchId) throws JatosGuiException {
+    public Result submitEditedProperties(Http.Request request, Long studyId, Long batchId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         Batch currentBatch = batchDao.findById(batchId);
@@ -352,8 +350,7 @@ public class Batches extends Controller {
         }
         BatchProperties batchProperties = form.get();
         // Have to bind ALLOWED_WORKER_TYPES from checkboxes by hand
-        String[] allowedWorkerArray = Controller.request().body()
-                .asFormUrlEncoded().get(BatchProperties.ALLOWED_WORKER_TYPES);
+        String[] allowedWorkerArray = request.body().asFormUrlEncoded().get(BatchProperties.ALLOWED_WORKER_TYPES);
         if (allowedWorkerArray != null) {
             Arrays.stream(allowedWorkerArray).forEach(batchProperties::addAllowedWorkerType);
         }

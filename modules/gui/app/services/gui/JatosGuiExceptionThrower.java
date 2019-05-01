@@ -77,9 +77,9 @@ public class JatosGuiExceptionThrower {
 	 * Ajax request. The exception's type determines the response's HTTP status
 	 * code.
 	 */
-	public void throwRedirect(Exception e, Call call) throws JatosGuiException {
+	public void throwRedirect(Exception e, Call call, boolean ajax) throws JatosGuiException {
 		Result result;
-		if (HttpUtils.isAjax()) {
+		if (ajax) {
 			int statusCode = getHttpStatusFromException(e);
 			result = Results.status(statusCode, e.getMessage());
 		} else {
@@ -90,52 +90,19 @@ public class JatosGuiExceptionThrower {
 	}
 
 	/**
-	 * Throws a JatosGuiException with the given error msg and HTTP status. If
-	 * non Ajax it shows home view. Distinguishes between normal and Ajax
-	 * request.
-	 */
-	public void throwHome(String errorMsg, int httpStatus)
-			throws JatosGuiException {
-		Result result;
-		if (HttpUtils.isAjax()) {
-			result = Results.status(httpStatus, errorMsg);
-		} else {
-			RequestScopeMessaging.error(errorMsg);
-			result = homeProvider.get().home(httpStatus);
-		}
-		throw new JatosGuiException(result, errorMsg);
-	}
-
-	/**
 	 * Throws a JatosGuiException. If it's a non-Ajax request, it puts the
 	 * exception's message into the request scope and returns the home view. If
 	 * it's a Ajax request, it just returns the exception's message. The HTTP
 	 * status code is determined by the exception type.
 	 */
-	public void throwHome(Exception e) throws JatosGuiException {
+	public void throwHome(Http.Request request, Exception e, boolean ajax) throws JatosGuiException {
 		Result result;
 		int httpStatus = getHttpStatusFromException(e);
-		if (HttpUtils.isAjax()) {
+		if (ajax) {
 			result = Results.status(httpStatus, e.getMessage());
 		} else {
 			RequestScopeMessaging.error(e.getMessage());
-			result = homeProvider.get().home(httpStatus);
-		}
-		throw new JatosGuiException(result, e.getMessage());
-	}
-
-	/**
-	 * Throws a JatosGuiException with the given Result and a HTTP status
-	 * according to the exception. Distinguishes between normal and Ajax
-	 * request.
-	 */
-	public void throwResult(Exception e, Result result)
-			throws JatosGuiException {
-		if (HttpUtils.isAjax()) {
-			int httpStatus = getHttpStatusFromException(e);
-			result = Results.status(httpStatus, e.getMessage());
-		} else {
-			RequestScopeMessaging.error(e.getMessage());
+			result = homeProvider.get().home(request, httpStatus);
 		}
 		throw new JatosGuiException(result, e.getMessage());
 	}
@@ -145,14 +112,14 @@ public class JatosGuiExceptionThrower {
 	 * non Ajax it shows study's study view. Distinguishes between normal and
 	 * Ajax request.
 	 */
-	public void throwStudy(String errorMsg, int httpStatus, Long studyId)
+	public void throwStudy(Http.Request request, String errorMsg, int httpStatus, Long studyId)
 			throws JatosGuiException {
 		Result result;
-		if (HttpUtils.isAjax()) {
+		if (HttpUtils.isAjax(request)) {
 			result = Results.status(httpStatus, errorMsg);
 		} else {
 			RequestScopeMessaging.error(errorMsg);
-			result = studiesProvider.get().study(studyId, httpStatus);
+			result = studiesProvider.get().study(request, studyId, httpStatus);
 		}
 		throw new JatosGuiException(result, errorMsg);
 	}
@@ -163,14 +130,14 @@ public class JatosGuiExceptionThrower {
 	 * view. If it's a Ajax request, it just returns the exception's message.
 	 * The HTTP status code is determined by the exception type.
 	 */
-	public void throwStudy(Exception e, Long studyId) throws JatosGuiException {
+	public void throwStudy(Http.Request request, Exception e, Long studyId) throws JatosGuiException {
 		Result result;
 		int httpStatus = getHttpStatusFromException(e);
-		if (HttpUtils.isAjax()) {
+		if (HttpUtils.isAjax(request)) {
 			result = Results.status(httpStatus, e.getMessage());
 		} else {
 			RequestScopeMessaging.error(e.getMessage());
-			result = studiesProvider.get().study(studyId, httpStatus);
+			result = studiesProvider.get().study(request, studyId, httpStatus);
 		}
 		throw new JatosGuiException(result, e.getMessage());
 	}

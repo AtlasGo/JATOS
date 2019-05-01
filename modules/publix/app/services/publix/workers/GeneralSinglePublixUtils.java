@@ -27,33 +27,27 @@ import java.util.Map;
 public class GeneralSinglePublixUtils extends PublixUtils<GeneralSingleWorker> {
 
     @Inject
-    GeneralSinglePublixUtils(ResultCreator resultCreator,
-            IdCookieService idCookieService,
-            GroupAdministration groupAdministration,
-            GeneralSingleErrorMessages errorMessages, StudyDao studyDao,
-            StudyResultDao studyResultDao, ComponentDao componentDao,
-            ComponentResultDao componentResultDao, WorkerDao workerDao,
-            BatchDao batchDao, StudyLogger studyLogger) {
-        super(resultCreator, idCookieService, groupAdministration,
-                errorMessages, studyDao, studyResultDao, componentDao,
-                componentResultDao, workerDao, batchDao, studyLogger);
+    GeneralSinglePublixUtils(ResultCreator resultCreator, IdCookieService idCookieService,
+            GroupAdministration groupAdministration, GeneralSingleErrorMessages errorMessages, StudyDao studyDao,
+            StudyResultDao studyResultDao, ComponentDao componentDao, ComponentResultDao componentResultDao,
+            WorkerDao workerDao, BatchDao batchDao, StudyLogger studyLogger) {
+        super(resultCreator, idCookieService, groupAdministration, errorMessages, studyDao, studyResultDao,
+                componentDao, componentResultDao, workerDao, batchDao, studyLogger);
     }
 
     @Override
-    public GeneralSingleWorker retrieveTypedWorker(Long workerId)
-            throws ForbiddenPublixException {
+    public GeneralSingleWorker retrieveTypedWorker(Long workerId) throws ForbiddenPublixException {
         Worker worker = super.retrieveWorker(workerId);
         if (!(worker instanceof GeneralSingleWorker)) {
-            throw new ForbiddenPublixException(
-                    errorMessages.workerNotCorrectType(worker.getId()));
+            throw new ForbiddenPublixException(errorMessages.workerNotCorrectType(worker.getId()));
         }
         return (GeneralSingleWorker) worker;
     }
 
     @Override
-    public Map<String, String> getNonJatosUrlQueryParameters() {
+    public Map<String, String> getNonJatosUrlQueryParameters(Http.Request request) {
         Map<String, String> queryMap = new HashMap<>();
-        Http.Context.current().request().queryString().forEach((k, v) -> queryMap.put(k, v[0]));
+        request.queryString().forEach((k, v) -> queryMap.put(k, v[0]));
         queryMap.remove(GeneralSinglePublix.GENERALSINGLE);
         queryMap.remove("batchId");
         queryMap.remove("pre");

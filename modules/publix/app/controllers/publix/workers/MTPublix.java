@@ -19,6 +19,7 @@ import models.common.workers.MTWorker;
 import play.Logger;
 import play.Logger.ALogger;
 import play.db.jpa.JPAApi;
+import play.mvc.Http;
 import play.mvc.Result;
 import services.publix.PublixErrorMessages;
 import services.publix.PublixHelpers;
@@ -69,17 +70,13 @@ public class MTPublix extends Publix<MTWorker> implements IPublix {
     private final StudyLogger studyLogger;
 
     @Inject
-    MTPublix(JPAApi jpa, MTPublixUtils publixUtils,
-            MTStudyAuthorisation studyAuthorisation,
-            ResultCreator resultCreator, WorkerCreator workerCreator,
-            MTGroupChannel groupChannel, IdCookieService idCookieService,
-            MTErrorMessages errorMessages, StudyAssets studyAssets,
-            JsonUtils jsonUtils, ComponentResultDao componentResultDao,
-            StudyResultDao studyResultDao, MTWorkerDao mtWorkerDao, StudyLogger studyLogger) {
-        super(jpa, publixUtils, studyAuthorisation,
-                groupChannel, idCookieService,
-                errorMessages, studyAssets, jsonUtils, componentResultDao,
-                studyResultDao, studyLogger);
+    MTPublix(JPAApi jpa, MTPublixUtils publixUtils, MTStudyAuthorisation studyAuthorisation,
+            ResultCreator resultCreator, WorkerCreator workerCreator, MTGroupChannel groupChannel,
+            IdCookieService idCookieService, MTErrorMessages errorMessages, StudyAssets studyAssets,
+            JsonUtils jsonUtils, ComponentResultDao componentResultDao, StudyResultDao studyResultDao,
+            MTWorkerDao mtWorkerDao, StudyLogger studyLogger) {
+        super(jpa, publixUtils, studyAuthorisation, groupChannel, idCookieService, errorMessages, studyAssets,
+                jsonUtils, componentResultDao, studyResultDao, studyLogger);
         this.publixUtils = publixUtils;
         this.studyAuthorisation = studyAuthorisation;
         this.resultCreator = resultCreator;
@@ -90,12 +87,11 @@ public class MTPublix extends Publix<MTWorker> implements IPublix {
     }
 
     @Override
-    public Result startStudy(Long studyId, Long batchId) throws PublixException {
+    public Result startStudy(Http.Request request, Long studyId, Long batchId) throws PublixException {
         // Get MTurk query parameters
-        String mtWorkerId = HttpUtils.getQueryString(MT_WORKER_ID);
-        String mtAssignmentId = HttpUtils.getQueryString(ASSIGNMENT_ID);
-        LOGGER.info(".startStudy: studyId " + studyId + ", " + "batchId "
-                + batchId);
+        String mtWorkerId = HttpUtils.getQueryString(request, MT_WORKER_ID);
+        String mtAssignmentId = HttpUtils.getQueryString(request, ASSIGNMENT_ID);
+        LOGGER.info(".startStudy: studyId " + studyId + ", " + "batchId " + batchId);
 
         Study study = publixUtils.retrieveStudy(studyId);
         Batch batch = publixUtils.retrieveBatchByIdOrDefault(batchId, study);
@@ -112,47 +108,40 @@ public class MTPublix extends Publix<MTWorker> implements IPublix {
         }
         Optional<MTWorker> worker = mtWorkerDao.findByMTWorkerId(mtWorkerId);
         if (!worker.isPresent()) {
-            String workerType = retrieveWorkerTypeFromQueryString();
-            boolean isRequestFromMTurkSandbox = workerType
-                    .equals(MTSandboxWorker.WORKER_TYPE);
-            worker = Optional.of(workerCreator.createAndPersistMTWorker(mtWorkerId,
-                    isRequestFromMTurkSandbox, batch));
+            String workerType = retrieveWorkerTypeFromQueryString(request);
+            boolean isRequestFromMTurkSandbox = workerType.equals(MTSandboxWorker.WORKER_TYPE);
+            worker = Optional.of(workerCreator.createAndPersistMTWorker(mtWorkerId, isRequestFromMTurkSandbox, batch));
         }
         studyAuthorisation.checkWorkerAllowedToStartStudy(worker.get(), study, batch);
-        LOGGER.info(".startStudy: study (study ID " + studyId + ", batch ID "
-                + batchId + ") " + "assigned to worker with ID " + worker.get().getId());
+        LOGGER.info(".startStudy: study (study ID " + studyId + ", batch ID " + batchId + ") "
+                + "assigned to worker with ID " + worker.get().getId());
 
         publixUtils.finishOldestStudyResult();
         StudyResult studyResult = resultCreator.createStudyResult(study, batch, worker.get());
-        publixUtils.setUrlQueryParameter(studyResult);
+        publixUtils.setUrlQueryParameter(request, studyResult);
         idCookieService.writeIdCookie(worker.get(), batch, studyResult);
 
         Component firstComponent = publixUtils.retrieveFirstActiveComponent(study);
-        studyLogger.log(study, "Started study run with " + MTWorker.UI_WORKER_TYPE
-                + " worker", batch, worker.get());
-        return redirect(controllers.publix.routes.PublixInterceptor.startComponent(
-                studyId, firstComponent.getId(), studyResult.getId()));
+        studyLogger.log(study, "Started study run with " + MTWorker.UI_WORKER_TYPE + " worker", batch, worker.get());
+        return redirect(controllers.publix.routes.PublixInterceptor
+                .startComponent(studyId, firstComponent.getId(), studyResult.getId()));
     }
 
     @Override
-    public Result finishStudy(Long studyId, Long studyResultId,
-            Boolean successful, String errorMsg) throws PublixException {
-        LOGGER.info(".finishStudy: studyId " + studyId + ", " + "studyResultId "
-                + studyResultId + ", " + "successful " + successful + ", "
-                + "errorMsg \"" + errorMsg + "\"");
+    public Result finishStudy(Http.Request request, Long studyId, Long studyResultId, Boolean successful,
+            String errorMsg) throws PublixException {
+        LOGGER.info(".finishStudy: studyId " + studyId + ", " + "studyResultId " + studyResultId + ", " + "successful "
+                + successful + ", " + "errorMsg \"" + errorMsg + "\"");
         IdCookieModel idCookie = idCookieService.getIdCookie(studyResultId);
         Study study = publixUtils.retrieveStudy(studyId);
         Batch batch = publixUtils.retrieveBatch(idCookie.getBatchId());
-        MTWorker worker = publixUtils
-                .retrieveTypedWorker(idCookie.getWorkerId());
+        MTWorker worker = publixUtils.retrieveTypedWorker(idCookie.getWorkerId());
         studyAuthorisation.checkWorkerAllowedToDoStudy(worker, study, batch);
 
-        StudyResult studyResult = publixUtils.retrieveStudyResult(worker, study,
-                studyResultId);
+        StudyResult studyResult = publixUtils.retrieveStudyResult(worker, study, studyResultId);
         String confirmationCode;
         if (!PublixHelpers.studyDone(studyResult)) {
-            confirmationCode = publixUtils.finishStudyResult(successful,
-                    errorMsg, studyResult);
+            confirmationCode = publixUtils.finishStudyResult(successful, errorMsg, studyResult);
             publixUtils.finishMemberInGroup(studyResult);
             groupChannel.closeGroupChannel(studyResult);
         } else {
@@ -161,26 +150,23 @@ public class MTPublix extends Publix<MTWorker> implements IPublix {
         idCookieService.discardIdCookie(studyResult.getId());
         studyLogger.log(study, "Finished study run", worker);
 
-        if (HttpUtils.isAjax()) {
+        if (HttpUtils.isAjax(request)) {
             return ok(confirmationCode);
         } else {
             if (!successful) {
                 return ok(views.html.publix.error.render(errorMsg));
             } else {
-                return ok(views.html.publix.confirmationCode
-                        .render(confirmationCode));
+                return ok(views.html.publix.confirmationCode.render(confirmationCode));
             }
         }
     }
 
-    private String retrieveWorkerTypeFromQueryString()
-            throws BadRequestPublixException {
-        String mtWorkerId = HttpUtils.getQueryString(MTPublix.MT_WORKER_ID);
+    private String retrieveWorkerTypeFromQueryString(Http.Request request) throws BadRequestPublixException {
+        String mtWorkerId = HttpUtils.getQueryString(request, MTPublix.MT_WORKER_ID);
         if (mtWorkerId != null) {
-            return retrieveWorkerType();
+            return retrieveWorkerType(request);
         }
-        throw new BadRequestPublixException(
-                PublixErrorMessages.UNKNOWN_WORKER_TYPE);
+        throw new BadRequestPublixException(PublixErrorMessages.UNKNOWN_WORKER_TYPE);
     }
 
     /**
@@ -189,10 +175,9 @@ public class MTPublix extends Publix<MTWorker> implements IPublix {
      * and it's value contains 'sandbox' it returns the MTSandboxWorker one -
      * and MTWorker one otherwise.
      */
-    public String retrieveWorkerType() {
-        String turkSubmitTo = request().getQueryString("turkSubmitTo");
-        if (turkSubmitTo != null
-                && turkSubmitTo.toLowerCase().contains("sandbox")) {
+    public String retrieveWorkerType(Http.Request request) {
+        String turkSubmitTo = request.getQueryString("turkSubmitTo");
+        if (turkSubmitTo != null && turkSubmitTo.toLowerCase().contains("sandbox")) {
             return MTSandboxWorker.WORKER_TYPE;
         } else {
             return MTWorker.WORKER_TYPE;

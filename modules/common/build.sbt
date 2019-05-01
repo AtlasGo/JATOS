@@ -16,7 +16,8 @@ libraryDependencies ++= Seq(
   "mysql" % "mysql-connector-java" % "5.1.40",
   "org.jsoup" % "jsoup" % "1.11.3",
   "commons-io" % "commons-io" % "2.6",
-  "com.diffplug.durian" % "durian" % "3.4.0"
+  "com.diffplug.durian" % "durian" % "3.4.0",
+  "org.apache.commons" % "commons-lang3" % "3.9"
 )
 
 // No source docs in distribution

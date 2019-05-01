@@ -9,6 +9,7 @@ import models.common.*;
 import models.common.ComponentResult.ComponentState;
 import models.common.StudyResult.StudyState;
 import models.common.workers.Worker;
+import play.mvc.Http;
 import services.publix.idcookie.IdCookieService;
 import utils.common.JsonUtils;
 
@@ -37,13 +38,10 @@ public abstract class PublixUtils<T extends Worker> {
     private final BatchDao batchDao;
     private final StudyLogger studyLogger;
 
-    public PublixUtils(ResultCreator resultCreator,
-            IdCookieService idCookieService,
-            GroupAdministration groupAdministration,
-            PublixErrorMessages errorMessages, StudyDao studyDao,
-            StudyResultDao studyResultDao, ComponentDao componentDao,
-            ComponentResultDao componentResultDao, WorkerDao workerDao,
-            BatchDao batchDao, StudyLogger studyLogger) {
+    public PublixUtils(ResultCreator resultCreator, IdCookieService idCookieService,
+            GroupAdministration groupAdministration, PublixErrorMessages errorMessages, StudyDao studyDao,
+            StudyResultDao studyResultDao, ComponentDao componentDao, ComponentResultDao componentResultDao,
+            WorkerDao workerDao, BatchDao batchDao, StudyLogger studyLogger) {
         this.resultCreator = resultCreator;
         this.idCookieService = idCookieService;
         this.groupAdministration = groupAdministration;
@@ -61,8 +59,7 @@ public abstract class PublixUtils<T extends Worker> {
      * Like {@link #retrieveWorker(Long)} but returns a concrete
      * implementation of the abstract Worker class
      */
-    public abstract T retrieveTypedWorker(Long workerId)
-            throws ForbiddenPublixException;
+    public abstract T retrieveTypedWorker(Long workerId) throws ForbiddenPublixException;
 
     /**
      * Retrieves the worker with the given worker ID from the DB.
@@ -70,8 +67,7 @@ public abstract class PublixUtils<T extends Worker> {
     public Worker retrieveWorker(Long workerId) throws ForbiddenPublixException {
         Worker worker = workerDao.findById(workerId);
         if (worker == null) {
-            throw new ForbiddenPublixException(
-                    PublixErrorMessages.workerNotExist(workerId));
+            throw new ForbiddenPublixException(PublixErrorMessages.workerNotExist(workerId));
         }
         return worker;
     }
@@ -95,8 +91,8 @@ public abstract class PublixUtils<T extends Worker> {
                     // Worker tried to reload a non-reloadable component -> end
                     // component and study with FAIL
                     finishComponentResult(lastComponentResult, ComponentState.FAIL);
-                    String errorMsg = PublixErrorMessages.componentNotAllowedToReload(
-                            studyResult.getStudy().getId(), component.getId());
+                    String errorMsg = PublixErrorMessages
+                            .componentNotAllowedToReload(studyResult.getStudy().getId(), component.getId());
                     throw new ForbiddenReloadException(errorMsg);
                 }
             } else {
@@ -185,8 +181,7 @@ public abstract class PublixUtils<T extends Worker> {
     private void finishAllComponentResults(StudyResult studyResult) {
         studyResult.getComponentResultList().stream()
                 .filter(componentResult -> !PublixHelpers.componentDone(componentResult))
-                .forEach(componentResult -> finishComponentResult(componentResult,
-                        ComponentState.FINISHED));
+                .forEach(componentResult -> finishComponentResult(componentResult, ComponentState.FINISHED));
     }
 
     /**
@@ -204,8 +199,7 @@ public abstract class PublixUtils<T extends Worker> {
             // If the abandoned study result isn't done, finish it.
             if (abandonedStudyResult != null && !PublixHelpers.studyDone(abandonedStudyResult)) {
                 finishMemberInGroup(abandonedStudyResult);
-                finishStudyResult(false, PublixErrorMessages.ABANDONED_STUDY_BY_COOKIE,
-                        abandonedStudyResult);
+                finishStudyResult(false, PublixErrorMessages.ABANDONED_STUDY_BY_COOKIE, abandonedStudyResult);
                 studyLogger.log(abandonedStudyResult.getStudy(), "Finish abandoned study",
                         abandonedStudyResult.getWorker());
             }
@@ -228,28 +222,23 @@ public abstract class PublixUtils<T extends Worker> {
     public StudyResult retrieveStudyResult(Worker worker, Study study, Long studyResultId)
             throws ForbiddenPublixException, BadRequestPublixException {
         if (studyResultId == null) {
-            throw new ForbiddenPublixException(
-                    "error retrieving study result ID");
+            throw new ForbiddenPublixException("error retrieving study result ID");
         }
         StudyResult studyResult = studyResultDao.findById(studyResultId);
         if (studyResult == null) {
-            throw new BadRequestPublixException(
-                    PublixErrorMessages.STUDY_RESULT_DOESN_T_EXIST);
+            throw new BadRequestPublixException(PublixErrorMessages.STUDY_RESULT_DOESN_T_EXIST);
         }
         // Check that the given worker actually did this study result
         if (!worker.getStudyResultList().contains(studyResult)) {
-            throw new ForbiddenPublixException(
-                    PublixErrorMessages.workerNeverDidStudy(worker, study.getId()));
+            throw new ForbiddenPublixException(PublixErrorMessages.workerNeverDidStudy(worker, study.getId()));
         }
         // Check that this study result belongs to the given study
         if (!studyResult.getStudy().getId().equals(study.getId())) {
-            throw new ForbiddenPublixException(
-                    PublixErrorMessages.STUDY_RESULT_DOESN_T_BELONG_TO_THIS_STUDY);
+            throw new ForbiddenPublixException(PublixErrorMessages.STUDY_RESULT_DOESN_T_BELONG_TO_THIS_STUDY);
         }
         // Check that this study result isn't finished
         if (PublixHelpers.studyDone(studyResult)) {
-            throw new ForbiddenPublixException(
-                    PublixErrorMessages.workerFinishedStudyAlready(worker, study.getId()));
+            throw new ForbiddenPublixException(PublixErrorMessages.workerFinishedStudyAlready(worker, study.getId()));
         }
         return studyResult;
 
@@ -280,8 +269,8 @@ public abstract class PublixUtils<T extends Worker> {
      * yet starts one for the given component. The current ComponentResult
      * doesn't have to be of the given Component.
      */
-    public ComponentResult retrieveStartedComponentResult(Component component,
-            StudyResult studyResult) throws ForbiddenReloadException {
+    public ComponentResult retrieveStartedComponentResult(Component component, StudyResult studyResult)
+            throws ForbiddenReloadException {
         Optional<ComponentResult> current = retrieveCurrentComponentResult(studyResult);
         // Start the component if it was never started or if it's a reload of the component
         return current.isPresent() ? current.get() : startComponent(component, studyResult);
@@ -298,8 +287,7 @@ public abstract class PublixUtils<T extends Worker> {
             component = study.getNextComponent(component.get());
         }
         if (!component.isPresent()) {
-            throw new NotFoundPublixException(PublixErrorMessages
-                    .studyHasNoActiveComponents(study.getId()));
+            throw new NotFoundPublixException(PublixErrorMessages.studyHasNoActiveComponents(study.getId()));
         }
         return component.get();
     }
@@ -310,9 +298,8 @@ public abstract class PublixUtils<T extends Worker> {
      */
     public Optional<Component> retrieveNextActiveComponent(StudyResult studyResult)
             throws InternalServerErrorPublixException {
-        Component current = retrieveLastComponent(studyResult).orElseThrow(() ->
-                new InternalServerErrorPublixException(
-                        "Couldn't find the last running component."));
+        Component current = retrieveLastComponent(studyResult)
+                .orElseThrow(() -> new InternalServerErrorPublixException("Couldn't find the last running component."));
         Optional<Component> next = studyResult.getStudy().getNextComponent(current);
         // Find next active component or null if study has no more components
         while (next.isPresent() && !next.get().isActive()) {
@@ -336,16 +323,14 @@ public abstract class PublixUtils<T extends Worker> {
             throws NotFoundPublixException, BadRequestPublixException, ForbiddenPublixException {
         Component component = componentDao.findById(componentId);
         if (component == null) {
-            throw new NotFoundPublixException(PublixErrorMessages
-                    .componentNotExist(study.getId(), componentId));
+            throw new NotFoundPublixException(PublixErrorMessages.componentNotExist(study.getId(), componentId));
         }
         if (!component.getStudy().getId().equals(study.getId())) {
-            throw new BadRequestPublixException(PublixErrorMessages
-                    .componentNotBelongToStudy(study.getId(), componentId));
+            throw new BadRequestPublixException(
+                    PublixErrorMessages.componentNotBelongToStudy(study.getId(), componentId));
         }
         if (!component.isActive()) {
-            throw new ForbiddenPublixException(PublixErrorMessages
-                    .componentNotActive(study.getId(), componentId));
+            throw new ForbiddenPublixException(PublixErrorMessages.componentNotActive(study.getId(), componentId));
         }
         return component;
     }
@@ -354,15 +339,13 @@ public abstract class PublixUtils<T extends Worker> {
             throws NotFoundPublixException, BadRequestPublixException {
         Study study = retrieveStudy(studyId);
         if (position == null) {
-            throw new BadRequestPublixException(
-                    PublixErrorMessages.COMPONENTS_POSITION_NOT_NULL);
+            throw new BadRequestPublixException(PublixErrorMessages.COMPONENTS_POSITION_NOT_NULL);
         }
         Component component;
         try {
             component = study.getComponent(position);
         } catch (IndexOutOfBoundsException e) {
-            throw new NotFoundPublixException(
-                    PublixErrorMessages.noComponentAtPosition(study.getId(), position));
+            throw new NotFoundPublixException(PublixErrorMessages.noComponentAtPosition(study.getId(), position));
         }
         return component;
     }
@@ -374,8 +357,7 @@ public abstract class PublixUtils<T extends Worker> {
     public Study retrieveStudy(Long studyId) throws NotFoundPublixException {
         Study study = studyDao.findById(studyId);
         if (study == null) {
-            throw new NotFoundPublixException(
-                    PublixErrorMessages.studyNotExist(studyId));
+            throw new NotFoundPublixException(PublixErrorMessages.studyNotExist(studyId));
         }
         return study;
     }
@@ -384,11 +366,10 @@ public abstract class PublixUtils<T extends Worker> {
      * Checks if this component belongs to this study and throws an
      * BadRequestPublixException if it doesn't.
      */
-    public void checkComponentBelongsToStudy(Study study, Component component)
-            throws BadRequestPublixException {
+    public void checkComponentBelongsToStudy(Study study, Component component) throws BadRequestPublixException {
         if (!component.getStudy().equals(study)) {
-            throw new BadRequestPublixException(PublixErrorMessages
-                    .componentNotBelongToStudy(study.getId(), component.getId()));
+            throw new BadRequestPublixException(
+                    PublixErrorMessages.componentNotBelongToStudy(study.getId(), component.getId()));
         }
     }
 
@@ -397,8 +378,7 @@ public abstract class PublixUtils<T extends Worker> {
      */
     public void checkStudyIsGroupStudy(Study study) throws ForbiddenPublixException {
         if (!study.isGroupStudy()) {
-            throw new ForbiddenPublixException(
-                    PublixErrorMessages.studyNotGroupStudy(study.getId()));
+            throw new ForbiddenPublixException(PublixErrorMessages.studyNotGroupStudy(study.getId()));
         }
     }
 
@@ -407,8 +387,7 @@ public abstract class PublixUtils<T extends Worker> {
      * returns the default batch of this study. If the batch doesn't exist it throws an
      * NotFoundPublixException.
      */
-    public Batch retrieveBatchByIdOrDefault(Long batchId, Study study)
-            throws NotFoundPublixException {
+    public Batch retrieveBatchByIdOrDefault(Long batchId, Study study) throws NotFoundPublixException {
         if (batchId == -1) {
             // The default batch is always the first one in study's batch list
             return study.getDefaultBatch();
@@ -434,10 +413,10 @@ public abstract class PublixUtils<T extends Worker> {
      * state PRE and the study result moved away from the first active component (this
      * means the given componentId isn't the first component's one).
      */
-    public void setPreStudyStateByComponentId(StudyResult studyResult, Study study,
-            Long componentId) throws NotFoundPublixException {
-        if (studyResult.getStudyState() == StudyState.PRE
-                && !retrieveFirstActiveComponent(study).getId().equals(componentId)) {
+    public void setPreStudyStateByComponentId(StudyResult studyResult, Study study, Long componentId)
+            throws NotFoundPublixException {
+        if (studyResult.getStudyState() == StudyState.PRE && !retrieveFirstActiveComponent(study).getId()
+                .equals(componentId)) {
             studyResult.setStudyState(StudyState.STARTED);
         }
         studyResultDao.update(studyResult);
@@ -447,14 +426,14 @@ public abstract class PublixUtils<T extends Worker> {
      * Gets the URL query parameters without the JATOS specific ones. Since the JATOS specific ones
      * vary from worker to worker the method is defined in the worker-specific sub-classes.
      */
-    protected abstract Map<String, String> getNonJatosUrlQueryParameters();
+    protected abstract Map<String, String> getNonJatosUrlQueryParameters(Http.Request request);
 
     /**
      * Get query string parameters from the calling URL and put them into the field
      * urlQueryParameters in StudyResult as a JSON string.
      */
-    public StudyResult setUrlQueryParameter(StudyResult studyResult) {
-        String parameter = JsonUtils.asJson(getNonJatosUrlQueryParameters());
+    public StudyResult setUrlQueryParameter(Http.Request request, StudyResult studyResult) {
+        String parameter = JsonUtils.asJson(getNonJatosUrlQueryParameters(request));
         studyResult.setUrlQueryParameters(parameter);
         return studyResult;
     }

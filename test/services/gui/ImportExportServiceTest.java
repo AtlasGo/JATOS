@@ -509,7 +509,7 @@ public class ImportExportServiceTest {
     }
 
     @Test
-    public void checkCreateStudyExportZipFile() throws IOException {
+    public void checkCreateStudyExportZipFile(Http.Request request) throws IOException {
         testHelper.mockContext();
 
         Study study = testHelper.createAndPersistExampleStudyForAdmin(injector);
@@ -533,8 +533,7 @@ public class ImportExportServiceTest {
         assertThat(jsonNode.get("uploadedDirExists").asBoolean()).isTrue();
 
         // importStudy() should remember the study file name in the Play session
-        String studyFileName = Http.Context.current.get().session()
-                .get(ImportExportService.SESSION_UNZIPPED_STUDY_DIR);
+        String studyFileName = request.session().getOptional(ImportExportService.SESSION_UNZIPPED_STUDY_DIR).get();
         assertThat(studyFileName).startsWith("JatosImport_");
     }
 

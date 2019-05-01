@@ -1,18 +1,17 @@
 package utils.common;
 
+import play.Logger;
+import play.Logger.ALogger;
+import play.api.mvc.RequestHeader;
+import play.mvc.Http;
+import scala.Option;
+
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Optional;
-
-import play.Logger;
-import play.Logger.ALogger;
-import play.api.mvc.RequestHeader;
-import play.mvc.Controller;
-import play.mvc.Http;
-import scala.Option;
 
 /**
  * Utility class for all JATOS Controllers.
@@ -34,18 +33,18 @@ public class HttpUtils {
     /**
      * Check if the request was made via Ajax or not.
      */
-    public static Boolean isAjax() {
-        return Controller.request().header("X-Requested-With").map(v -> v.equals("XMLHttpRequest")).orElse(false);
+    public static Boolean isAjax(Http.Request request) {
+        return request.header("X-Requested-With").map(v -> v.equals("XMLHttpRequest")).orElse(false);
     }
 
     /**
      * Returns the request's host URL without path (including the 'play.http.context')
      * or query string. It returns the URL with the proper protocol http or https.
      */
-    public static URL getHostUrl() {
+    public static URL getHostUrl(Http.Request request) {
         try {
-            String protocol = getRequestsProtocol();
-            return new URL(protocol + "://" + Controller.request().host());
+            String protocol = getRequestsProtocol(request);
+            return new URL(protocol + "://" + request.host());
         } catch (MalformedURLException e) {
             LOGGER.error(".getHostUrl: couldn't get request's host URL", e);
         }
@@ -53,9 +52,9 @@ public class HttpUtils {
         return null;
     }
 
-    public static boolean isLocalhost() {
-        String host = Controller.request().host();
-        Optional<String> referer = Controller.request().header("referer");
+    public static boolean isLocalhost(Http.Request request) {
+        String host = request.host();
+        Optional<String> referer = request.header("referer");
         boolean isHostLocalhost = host != null && (host.contains("localhost") || host.contains("127.0.0.1"));
         boolean isRefererLocalhost = referer.map(r -> r.contains("localhost") || r.contains("127.0.0.1")).orElse(false);
         return isHostLocalhost || isRefererLocalhost;
@@ -71,10 +70,10 @@ public class HttpUtils {
      * balancer with HTTPS/SSL the 'X-Forwarded-Proto' is not set and to still
      * determine the right protocol we use the Referer as last option.
      */
-    private static String getRequestsProtocol() {
-        boolean isXForwardedProtoHttps = Controller.request().header("X-Forwarded-Proto").map(h -> h.equals("https")).orElse(false);
-        boolean isRefererProtoHttps = Controller.request().header("Referer").map(h -> h.startsWith("https")).orElse(false);
-        return isXForwardedProtoHttps || isRefererProtoHttps || Controller.request().secure() ? "https" : "http";
+    private static String getRequestsProtocol(Http.Request request) {
+        boolean isXForwardedProtoHttps = request.header("X-Forwarded-Proto").map(h -> h.equals("https")).orElse(false);
+        boolean isRefererProtoHttps = request.header("Referer").map(h -> h.startsWith("https")).orElse(false);
+        return isXForwardedProtoHttps || isRefererProtoHttps || request.secure() ? "https" : "http";
     }
 
     public static String urlEncode(String str) {
@@ -101,8 +100,8 @@ public class HttpUtils {
      * Gets the value of to the given key in request's query string and trims
      * whitespace.
      */
-    public static String getQueryString(String key) {
-        String value = Http.Context.current().request().getQueryString(key);
+    public static String getQueryString(Http.Request request, String key) {
+        String value = request.getQueryString(key);
         if (value != null) {
             value = value.trim();
         }

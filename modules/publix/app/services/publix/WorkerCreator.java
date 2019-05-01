@@ -31,8 +31,7 @@ public class WorkerCreator {
     /**
      * Creates and persists a MTWorker or a MTSandboxWorker.
      */
-    public MTWorker createAndPersistMTWorker(String mtWorkerId,
-            boolean mTurkSandbox, Batch batch) {
+    public MTWorker createAndPersistMTWorker(String mtWorkerId, boolean mTurkSandbox, Batch batch) {
         MTWorker worker;
         if (mTurkSandbox) {
             worker = new MTSandboxWorker(mtWorkerId);

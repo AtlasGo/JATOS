@@ -8,7 +8,6 @@ import general.common.{Common, MessagesStrings}
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc._
-import play.core.j.JavaHelpers
 import play.db.jpa.JPAApi
 import services.publix.PublixErrorMessages
 import services.publix.idcookie.IdCookieService
@@ -65,7 +64,7 @@ class StudyAssets @Inject()(components: ControllerComponents, ioUtils: IOUtils, 
     */
   def viaAssetsPath(urlPath: String): Action[AnyContent] = Action { request =>
     // Set Http.Context used in Play with Java. Needed by IdCookieService
-    play.mvc.Http.Context.current.set(play.core.j.JavaHelpers.createJavaContext(request, JavaHelpers.createContextComponents()))
+    //    play.mvc.Http.Context.current.set(play.core.j.JavaHelpers.createJavaContext(request, JavaHelpers.createContextComponents()))
 
     try {
       checkProperAssets(urlPath)
@@ -77,13 +76,13 @@ class StudyAssets @Inject()(components: ControllerComponents, ioUtils: IOUtils, 
       case e: PublixException =>
         val errorMsg = e.getMessage
         logger.info(".viaAssetsPath: " + errorMsg)
-        if (HttpUtils.isAjax) Forbidden(errorMsg)
+        if (HttpUtils.isAjax(request)) Forbidden(errorMsg)
         else Forbidden(views.html.publix.error.render(errorMsg))
       case _: IOException =>
         logger.info(s".viaAssetsPath: failed loading from path ${Common.getStudyAssetsRootPath}" +
           s"${File.separator}$urlPath")
         val errorMsg = s"Resource '$urlPath' couldn't be found."
-        if (HttpUtils.isAjax) NotFound(errorMsg)
+        if (HttpUtils.isAjax(request)) NotFound(errorMsg)
         else NotFound(views.html.publix.error.render(errorMsg))
     }
   }

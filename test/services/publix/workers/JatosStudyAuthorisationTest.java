@@ -54,10 +54,10 @@ public class JatosStudyAuthorisationTest {
     }
 
     @Test
-    public void checkWorkerAllowedToDoStudy() throws ForbiddenPublixException {
+    public void checkWorkerAllowedToDoStudy(Http.Request request) throws ForbiddenPublixException {
         testHelper.mockContext();
         User admin = testHelper.getAdmin();
-        Http.Context.current().session().put(JatosPublix.SESSION_USER_EMAIL, admin.getEmail());
+        request.session().adding(JatosPublix.SESSION_USER_EMAIL, admin.getEmail());
 
         Study study = testHelper.createAndPersistExampleStudyForAdmin(injector);
         Batch batch = study.getDefaultBatch();

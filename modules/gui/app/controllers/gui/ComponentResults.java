@@ -41,14 +41,14 @@ public class ComponentResults extends Controller {
     private static final ALogger LOGGER = Logger.of(ComponentResults.class);
 
     private final JatosGuiExceptionThrower jatosGuiExceptionThrower;
-    private final Checker checker;
-    private final AuthenticationService authenticationService;
-    private final BreadcrumbsService breadcrumbsService;
-    private final ResultRemover resultRemover;
-    private final JsonUtils jsonUtils;
-    private final StudyDao studyDao;
-    private final ComponentDao componentDao;
-    private final ComponentResultDao componentResultDao;
+    private final Checker                  checker;
+    private final AuthenticationService    authenticationService;
+    private final BreadcrumbsService       breadcrumbsService;
+    private final ResultRemover            resultRemover;
+    private final JsonUtils                jsonUtils;
+    private final StudyDao                 studyDao;
+    private final ComponentDao             componentDao;
+    private final ComponentResultDao       componentResultDao;
 
     @Inject
     ComponentResults(JatosGuiExceptionThrower jatosGuiExceptionThrower,
@@ -72,8 +72,8 @@ public class ComponentResults extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result componentResults(Long studyId, Long componentId,
-            String errorMsg, int httpStatus) throws JatosGuiException {
+    public Result componentResults(Http.Request request, Long studyId, Long componentId, String errorMsg,
+            int httpStatus) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         Component component = componentDao.findById(componentId);
@@ -81,30 +81,26 @@ public class ComponentResults extends Controller {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStandardForComponents(studyId, componentId, component);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwHome(e);
+            jatosGuiExceptionThrower.throwHome(request, e, HttpUtils.isAjax(request));
         }
 
         RequestScopeMessaging.error(errorMsg);
-        String breadcrumbs = breadcrumbsService.generateForComponent(study,
-                component, BreadcrumbsService.RESULTS);
-        return status(httpStatus,
-                views.html.gui.result.componentResults.render(loggedInUser,
-                        breadcrumbs, HttpUtils.isLocalhost(), study,
-                        component));
+        String breadcrumbs = breadcrumbsService.generateForComponent(study, component, BreadcrumbsService.RESULTS);
+        return status(httpStatus, views.html.gui.result.componentResults
+                .render(loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request), study, component));
     }
 
     @Transactional
     @Authenticated
-    public Result componentResults(Long studyId, Long componentId,
-            String errorMsg) throws JatosGuiException {
-        return componentResults(studyId, componentId, errorMsg, Http.Status.OK);
-    }
-
-    @Transactional
-    @Authenticated
-    public Result componentResults(Long studyId, Long componentId)
+    public Result componentResults(Http.Request request, Long studyId, Long componentId, String errorMsg)
             throws JatosGuiException {
-        return componentResults(studyId, componentId, null, Http.Status.OK);
+        return componentResults(request, studyId, componentId, errorMsg, Http.Status.OK);
+    }
+
+    @Transactional
+    @Authenticated
+    public Result componentResults(Http.Request request, Long studyId, Long componentId) throws JatosGuiException {
+        return componentResults(request, studyId, componentId, null, Http.Status.OK);
     }
 
     /**
@@ -133,7 +129,7 @@ public class ComponentResults extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result removeAllOfComponent(Long studyId, Long componentId) throws JatosGuiException {
+    public Result removeAllOfComponent(Http.Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         Component component = componentDao.findById(componentId);
@@ -141,7 +137,7 @@ public class ComponentResults extends Controller {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStandardForComponents(studyId, componentId, component);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwHome(e);
+            jatosGuiExceptionThrower.throwHome(request, e, HttpUtils.isAjax(request));
         }
 
         try {

@@ -1,3 +1,5 @@
+@(request: play.mvc.Http.Request)
+
 <!DOCTYPE html>
 
 <html lang="en">
@@ -23,7 +25,7 @@
 <p><b>JATOS configuration</b><br>
 Version: @general.common.Common.getJatosVersion()<br>
 Java: @java.lang.System.getProperty("java.version")<br>
-URL host: @utils.common.HttpUtils.getHostUrl()<br>
+URL host: @utils.common.HttpUtils.getHostUrl(request)<br>
 URL basepath: @general.common.Common.getPlayHttpContext()<br>
 Local basepath: @general.common.Common.getBasepath()<br>
 Study assets root path: @general.common.Common.getStudyAssetsRootPath()<br>
@@ -62,7 +64,7 @@ testHeartbeatJs();
 testWebSocket();
 
 function testHostUrl() {
-	var jatosHostUrl = "@utils.common.HttpUtils.getHostUrl()";
+	var jatosHostUrl = "@utils.common.HttpUtils.getHostUrl(request)";
 	var browserUrl = window.location.origin;
 	if (jatosHostUrl == browserUrl) {
 		$('#testHostUrlResult').html('<font color="green">OK</font>');

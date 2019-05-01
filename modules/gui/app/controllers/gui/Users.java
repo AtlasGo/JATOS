@@ -19,6 +19,7 @@ import play.data.FormFactory;
 import play.data.validation.ValidationError;
 import play.db.jpa.Transactional;
 import play.mvc.Controller;
+import play.mvc.Http;
 import play.mvc.Result;
 import services.gui.*;
 import utils.common.HttpUtils;
@@ -49,12 +50,9 @@ public class Users extends Controller {
     private final JsonUtils jsonUtils;
 
     @Inject
-    Users(JatosGuiExceptionThrower jatosGuiExceptionThrower,
-            UserService userService,
-            AuthenticationService authenticationService,
-            AuthenticationValidation authenticationValidation,
-            BreadcrumbsService breadcrumbsService, FormFactory formFactory,
-            JsonUtils jsonUtils) {
+    Users(JatosGuiExceptionThrower jatosGuiExceptionThrower, UserService userService,
+            AuthenticationService authenticationService, AuthenticationValidation authenticationValidation,
+            BreadcrumbsService breadcrumbsService, FormFactory formFactory, JsonUtils jsonUtils) {
         this.jatosGuiExceptionThrower = jatosGuiExceptionThrower;
         this.userService = userService;
         this.authenticationService = authenticationService;
@@ -66,12 +64,10 @@ public class Users extends Controller {
 
     @Transactional
     @Authenticated(Role.ADMIN)
-    public Result userManager() {
+    public Result userManager(Http.Request request) {
         User loggedInUser = authenticationService.getLoggedInUser();
-        String breadcrumbs = breadcrumbsService
-                .generateForHome(BreadcrumbsService.USER_MANAGER);
-        return ok(views.html.gui.user.userManager.render(loggedInUser,
-                breadcrumbs, HttpUtils.isLocalhost()));
+        String breadcrumbs = breadcrumbsService.generateForHome(BreadcrumbsService.USER_MANAGER);
+        return ok(views.html.gui.user.userManager.render(loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
     }
 
     /**
@@ -108,13 +104,12 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result profile(String email) throws JatosGuiException {
+    public Result profile(Http.Request request, String email) throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
-        checkEmailIsOfLoggedInUser(email, loggedInUser);
+        checkEmailIsOfLoggedInUser(request, email, loggedInUser);
 
         String breadcrumbs = breadcrumbsService.generateForUser(loggedInUser);
-        return ok(views.html.gui.user.profile.render(loggedInUser, breadcrumbs,
-                HttpUtils.isLocalhost()));
+        return ok(views.html.gui.user.profile.render(loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
     }
 
     /**
@@ -123,9 +118,9 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result singleUserData(String email) throws JatosGuiException {
+    public Result singleUserData(Http.Request request, String email) throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
-        checkEmailIsOfLoggedInUser(email, loggedInUser);
+        checkEmailIsOfLoggedInUser(request, email, loggedInUser);
         return ok(jsonUtils.userData(loggedInUser));
     }
 
@@ -141,8 +136,7 @@ public class Users extends Controller {
 
         // Validate via AuthenticationService
         NewUserModel newUser = form.get();
-        List<ValidationError> errorList = authenticationValidation
-                .validateNewUser(newUser, loggedInUser.getEmail());
+        List<ValidationError> errorList = authenticationValidation.validateNewUser(newUser, loggedInUser.getEmail());
         if (!errorList.isEmpty()) {
             errorList.forEach(form::withError);
             return badRequest(form.errorsAsJson());
@@ -158,12 +152,11 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitEditedProfile(String email) throws JatosGuiException {
+    public Result submitEditedProfile(Http.Request request, String email) throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
-        checkEmailIsOfLoggedInUser(email, loggedInUser);
+        checkEmailIsOfLoggedInUser(request, email, loggedInUser);
 
-        Form<ChangeUserProfileModel> form =
-                formFactory.form(ChangeUserProfileModel.class).bindFromRequest();
+        Form<ChangeUserProfileModel> form = formFactory.form(ChangeUserProfileModel.class).bindFromRequest();
         if (form.hasErrors()) {
             return badRequest(form.errorsAsJson());
         }
@@ -181,8 +174,7 @@ public class Users extends Controller {
     @Transactional
     @Authenticated
     public Result submitChangedPassword(String emailOfUserToChange) {
-        Form<ChangePasswordModel> form =
-                formFactory.form(ChangePasswordModel.class).bindFromRequest();
+        Form<ChangePasswordModel> form = formFactory.form(ChangePasswordModel.class).bindFromRequest();
 
         // Validate via AuthenticationValidation
         ChangePasswordModel changePasswordModel = form.get();
@@ -236,18 +228,17 @@ public class Users extends Controller {
         }
         // If the user removes himself: logout
         if (emailOfUserToRemove.equals(loggedInUserEmail)) {
-            authenticationService.clearSessionCookieAndSessionCache(session(),
-                    loggedInUser.getEmail(), request().host());
+            authenticationService
+                    .clearSessionCookieAndSessionCache(session(), loggedInUser.getEmail(), request().host());
         }
         return ok(" "); // jQuery.ajax cannot handle empty responses
     }
 
-    private void checkEmailIsOfLoggedInUser(String email, User loggedInUser)
+    private void checkEmailIsOfLoggedInUser(Http.Request request, String email, User loggedInUser)
             throws JatosGuiException {
         if (!email.toLowerCase().equals(loggedInUser.getEmail())) {
-            ForbiddenException e = new ForbiddenException(
-                    MessagesStrings.userNotAllowedToGetData(email));
-            jatosGuiExceptionThrower.throwRedirect(e, controllers.gui.routes.Home.home());
+            ForbiddenException e = new ForbiddenException(MessagesStrings.userNotAllowedToGetData(email));
+            jatosGuiExceptionThrower.throwRedirect(e, controllers.gui.routes.Home.home(), HttpUtils.isAjax(request));
         }
     }
 

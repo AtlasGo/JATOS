@@ -18,8 +18,8 @@ import javax.inject.Singleton;
 public class GeneralMultipleStudyAuthorisation extends StudyAuthorisation<GeneralMultipleWorker> {
 
     @Override
-    public void checkWorkerAllowedToStartStudy(GeneralMultipleWorker worker, Study study,
-            Batch batch) throws ForbiddenPublixException {
+    public void checkWorkerAllowedToStartStudy(GeneralMultipleWorker worker, Study study, Batch batch)
+            throws ForbiddenPublixException {
         if (!batch.isActive()) {
             throw new ForbiddenPublixException(PublixErrorMessages.batchInactive(batch.getId()));
         }
@@ -32,8 +32,8 @@ public class GeneralMultipleStudyAuthorisation extends StudyAuthorisation<Genera
             throws ForbiddenPublixException {
         // Check if worker type is allowed
         if (!batch.hasAllowedWorkerType(worker.getWorkerType())) {
-            throw new ForbiddenPublixException(PublixErrorMessages
-                    .workerTypeNotAllowed(worker.getUIWorkerType(), study.getId(), batch.getId()));
+            throw new ForbiddenPublixException(
+                    PublixErrorMessages.workerTypeNotAllowed(worker.getUIWorkerType(), study.getId(), batch.getId()));
         }
     }
 

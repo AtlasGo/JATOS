@@ -16,6 +16,7 @@ import models.common.workers.PersonalSingleWorker;
 import play.Logger;
 import play.Logger.ALogger;
 import play.db.jpa.JPAApi;
+import play.mvc.Http;
 import play.mvc.Result;
 import services.publix.ResultCreator;
 import services.publix.idcookie.IdCookieService;
@@ -30,9 +31,8 @@ import javax.inject.Singleton;
 import java.util.Optional;
 
 /**
- * Implementation of JATOS' public API for personal single study runs (runs with
- * invitation and pre-created worker). A personal single run is done by a
- * PersonalSingleWorker.
+ * Implementation of JATOS' public API for personal single study runs (runs with invitation and pre-created worker). A
+ * personal single run is done by a PersonalSingleWorker.
  *
  * @author Kristian Lange
  */
@@ -50,15 +50,12 @@ public class PersonalSinglePublix extends Publix<PersonalSingleWorker> implement
 
     @Inject
     PersonalSinglePublix(JPAApi jpa, PersonalSinglePublixUtils publixUtils,
-            PersonalSingleStudyAuthorisation studyAuthorisation,
-            ResultCreator resultCreator, PersonalSingleGroupChannel groupChannel,
-            IdCookieService idCookieService,
-            PersonalSingleErrorMessages errorMessages, StudyAssets studyAssets,
-            JsonUtils jsonUtils, ComponentResultDao componentResultDao,
-            StudyResultDao studyResultDao, StudyLogger studyLogger) {
-        super(jpa, publixUtils, studyAuthorisation, groupChannel,
-                idCookieService, errorMessages, studyAssets, jsonUtils,
-                componentResultDao, studyResultDao, studyLogger);
+            PersonalSingleStudyAuthorisation studyAuthorisation, ResultCreator resultCreator,
+            PersonalSingleGroupChannel groupChannel, IdCookieService idCookieService,
+            PersonalSingleErrorMessages errorMessages, StudyAssets studyAssets, JsonUtils jsonUtils,
+            ComponentResultDao componentResultDao, StudyResultDao studyResultDao, StudyLogger studyLogger) {
+        super(jpa, publixUtils, studyAuthorisation, groupChannel, idCookieService, errorMessages, studyAssets,
+                jsonUtils, componentResultDao, studyResultDao, studyLogger);
         this.publixUtils = publixUtils;
         this.studyAuthorisation = studyAuthorisation;
         this.resultCreator = resultCreator;
@@ -80,12 +77,12 @@ public class PersonalSinglePublix extends Publix<PersonalSingleWorker> implement
      * different then the first.
      */
     @Override
-    public Result startStudy(Long studyId, Long batchId) throws PublixException {
-        String workerIdStr = HttpUtils.getQueryString(PERSONAL_SINGLE_WORKER_ID);
-        boolean pre = HttpUtils.getQueryString("pre") != null;
-        LOGGER.info(".startStudy: studyId " + studyId + ", " + "batchId "
-                + batchId + ", " + PERSONAL_SINGLE_WORKER_ID + " " + workerIdStr
-                + ", " + "pre " + pre);
+    public Result startStudy(Http.Request request, Long studyId, Long batchId) throws PublixException {
+        String workerIdStr = HttpUtils.getQueryString(request, PERSONAL_SINGLE_WORKER_ID);
+        boolean pre = HttpUtils.getQueryString(request, "pre") != null;
+        LOGGER.info(
+                ".startStudy: studyId " + studyId + ", " + "batchId " + batchId + ", " + PERSONAL_SINGLE_WORKER_ID + " "
+                        + workerIdStr + ", " + "pre " + pre);
         Study study = publixUtils.retrieveStudy(studyId);
         Batch batch = publixUtils.retrieveBatchByIdOrDefault(batchId, study);
         PersonalSingleWorker worker = publixUtils.retrieveTypedWorker(workerIdStr);
@@ -107,13 +104,13 @@ public class PersonalSinglePublix extends Publix<PersonalSingleWorker> implement
             }
         }
         idCookieService.writeIdCookie(worker, batch, studyResult.get());
-        publixUtils.setUrlQueryParameter(studyResult.get());
+        publixUtils.setUrlQueryParameter(request, studyResult.get());
 
         Component component = publixUtils.retrieveFirstActiveComponent(study);
-        studyLogger.log(study, "Started study run with " + PersonalSingleWorker.UI_WORKER_TYPE
-                + " worker", batch, worker);
-        return redirect(controllers.publix.routes.PublixInterceptor.startComponent(
-                studyId, component.getId(), studyResult.get().getId()));
+        studyLogger
+                .log(study, "Started study run with " + PersonalSingleWorker.UI_WORKER_TYPE + " worker", batch, worker);
+        return redirect(controllers.publix.routes.PublixInterceptor
+                .startComponent(studyId, component.getId(), studyResult.get().getId()));
     }
 
 }

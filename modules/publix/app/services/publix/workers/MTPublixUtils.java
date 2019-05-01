@@ -27,32 +27,26 @@ import java.util.Map;
 public class MTPublixUtils extends PublixUtils<MTWorker> {
 
     @Inject
-    MTPublixUtils(ResultCreator resultCreator, IdCookieService idCookieService,
-            GroupAdministration groupAdministration,
-            MTErrorMessages errorMessages, StudyDao studyDao,
-            StudyResultDao studyResultDao, ComponentDao componentDao,
-            ComponentResultDao componentResultDao, WorkerDao workerDao,
-            BatchDao batchDao, StudyLogger studyLogger) {
-        super(resultCreator, idCookieService, groupAdministration,
-                errorMessages, studyDao, studyResultDao, componentDao,
-                componentResultDao, workerDao, batchDao, studyLogger);
+    MTPublixUtils(ResultCreator resultCreator, IdCookieService idCookieService, GroupAdministration groupAdministration,
+            MTErrorMessages errorMessages, StudyDao studyDao, StudyResultDao studyResultDao, ComponentDao componentDao,
+            ComponentResultDao componentResultDao, WorkerDao workerDao, BatchDao batchDao, StudyLogger studyLogger) {
+        super(resultCreator, idCookieService, groupAdministration, errorMessages, studyDao, studyResultDao,
+                componentDao, componentResultDao, workerDao, batchDao, studyLogger);
     }
 
     @Override
-    public MTWorker retrieveTypedWorker(Long workerId)
-            throws ForbiddenPublixException {
+    public MTWorker retrieveTypedWorker(Long workerId) throws ForbiddenPublixException {
         Worker worker = super.retrieveWorker(workerId);
         if (!(worker instanceof MTWorker)) {
-            throw new ForbiddenPublixException(
-                    errorMessages.workerNotCorrectType(worker.getId()));
+            throw new ForbiddenPublixException(errorMessages.workerNotCorrectType(worker.getId()));
         }
         return (MTWorker) worker;
     }
 
     @Override
-    public Map<String, String> getNonJatosUrlQueryParameters() {
+    public Map<String, String> getNonJatosUrlQueryParameters(Http.Request request) {
         Map<String, String> queryMap = new HashMap<>();
-        Http.Context.current().request().queryString().forEach((k, v) -> queryMap.put(k, v[0]));
+        request.queryString().forEach((k, v) -> queryMap.put(k, v[0]));
         // Allow MTurk's worker ID: https://github.com/JATOS/JATOS/issues/40
         // queryMap.remove(MTPublix.MT_WORKER_ID);
         queryMap.remove(MTPublix.ASSIGNMENT_ID);
