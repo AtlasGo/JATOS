@@ -15,6 +15,7 @@ import utils.common.JsonUtils;
 
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -426,14 +427,14 @@ public abstract class PublixUtils<T extends Worker> {
      * Gets the URL query parameters without the JATOS specific ones. Since the JATOS specific ones
      * vary from worker to worker the method is defined in the worker-specific sub-classes.
      */
-    protected abstract Map<String, String> getNonJatosUrlQueryParameters(Http.Request request);
+    protected abstract Map<String, String[]> getNonJatosUrlQueryParameters(Map<String, String[]> queryParameters);
 
     /**
      * Get query string parameters from the calling URL and put them into the field
      * urlQueryParameters in StudyResult as a JSON string.
      */
-    public StudyResult setUrlQueryParameter(Http.Request request, StudyResult studyResult) {
-        String parameter = JsonUtils.asJson(getNonJatosUrlQueryParameters(request));
+    public StudyResult setUrlQueryParameter(Map<String, String[]> queryParameters, StudyResult studyResult) {
+        String parameter = JsonUtils.asJson(getNonJatosUrlQueryParameters(queryParameters));
         studyResult.setUrlQueryParameters(parameter);
         return studyResult;
     }

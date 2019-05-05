@@ -24,6 +24,7 @@ import play.db.jpa.Transactional;
 import play.http.HttpEntity;
 import play.mvc.Controller;
 import play.mvc.Http;
+import play.mvc.Http.Request;
 import play.mvc.ResponseHeader;
 import play.mvc.Result;
 import services.gui.*;
@@ -94,7 +95,7 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result study(Http.Request request, Long studyId, int httpStatus) throws JatosGuiException {
+    public Result study(Request request, Long studyId, int httpStatus) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         checkStandardForStudy(request, studyId, study, loggedInUser);
@@ -107,7 +108,7 @@ public class Studies extends Controller {
 
     @Transactional
     @Authenticated
-    public Result study(Http.Request request, Long studyId) throws JatosGuiException {
+    public Result study(Request request, Long studyId) throws JatosGuiException {
         return study(request, studyId, Http.Status.OK);
     }
 
@@ -116,10 +117,10 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitCreated() {
+    public Result submitCreated(Request request) {
         User loggedInUser = authenticationService.getLoggedInUser();
 
-        Form<StudyProperties> form = formFactory.form(StudyProperties.class).bindFromRequest();
+        Form<StudyProperties> form = formFactory.form(StudyProperties.class).bindFromRequest(request);
         if (form.hasErrors()) {
             return badRequest(form.errorsAsJson());
         }
@@ -140,7 +141,7 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result properties(Http.Request request, Long studyId) throws JatosGuiException {
+    public Result properties(Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         checkStandardForStudy(request, studyId, study, loggedInUser);
@@ -154,7 +155,7 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitEdited(Long studyId) throws JatosGuiException {
+    public Result submitEdited(Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         try {
@@ -164,7 +165,7 @@ public class Studies extends Controller {
             jatosGuiExceptionThrower.throwAjax(e);
         }
 
-        Form<StudyProperties> form = formFactory.form(StudyProperties.class).bindFromRequest();
+        Form<StudyProperties> form = formFactory.form(StudyProperties.class).bindFromRequest(request);
         if (form.hasErrors()) {
             return badRequest(form.errorsAsJson());
         }
@@ -186,7 +187,7 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result toggleLock(Http.Request request, Long studyId) throws JatosGuiException {
+    public Result toggleLock(Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         checkStandardForStudy(request, studyId, study, loggedInUser);
@@ -355,7 +356,7 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result runStudy(Http.Request request, Long studyId, Long batchId) throws JatosGuiException {
+    public Result runStudy(Request request, Long studyId, Long batchId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         checkStandardForStudy(request, studyId, study, loggedInUser);
@@ -374,7 +375,7 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result tableDataByStudy(Http.Request request, Long studyId) throws JatosGuiException {
+    public Result tableDataByStudy(Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         checkStandardForStudy(request, studyId, study, loggedInUser);
@@ -397,8 +398,7 @@ public class Studies extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result studyLog(Http.Request request, Long studyId, int entryLimit, boolean download)
-            throws JatosGuiException {
+    public Result studyLog(Request request, Long studyId, int entryLimit, boolean download) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         checkStandardForStudy(request, studyId, study, loggedInUser);
@@ -439,7 +439,7 @@ public class Studies extends Controller {
         return ok(dataAsJson);
     }
 
-    private void checkStandardForStudy(Http.Request request, Long studyId, Study study, User loggedInUser)
+    private void checkStandardForStudy(Request request, Long studyId, Study study, User loggedInUser)
             throws JatosGuiException {
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);

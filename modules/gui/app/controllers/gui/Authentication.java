@@ -11,7 +11,7 @@ import play.data.Form;
 import play.data.FormFactory;
 import play.db.jpa.Transactional;
 import play.mvc.Controller;
-import play.mvc.Http;
+import play.mvc.Http.Request;
 import play.mvc.Result;
 import services.gui.AuthenticationService;
 import utils.common.HttpUtils;
@@ -53,8 +53,8 @@ public class Authentication extends Controller {
      * requests.
      */
     @Transactional
-    public Result authenticate(Http.Request request) {
-        Form<Login> loginForm = formFactory.form(Login.class).bindFromRequest();
+    public Result authenticate(Request request) {
+        Form<Login> loginForm = formFactory.form(Login.class).bindFromRequest(request);
         String email = loginForm.rawData().get("email");
         String password = loginForm.rawData().get("password");
 
@@ -72,8 +72,7 @@ public class Authentication extends Controller {
         }
     }
 
-    private Result returnBadRequestDueToRepeatedLoginAttempt(Http.Request request, Form<Login> loginForm,
-            String email) {
+    private Result returnBadRequestDueToRepeatedLoginAttempt(Request request, Form<Login> loginForm, String email) {
         LOGGER.warn("Authentication failed: remote address " + request.remoteAddress() + " failed repeatedly for email "
                 + email);
         if (HttpUtils.isAjax(request)) {
@@ -84,7 +83,7 @@ public class Authentication extends Controller {
         }
     }
 
-    private Result returnBadRequestDueToFailedAuth(Http.Request request, Form<Login> loginForm, String email) {
+    private Result returnBadRequestDueToFailedAuth(Request request, Form<Login> loginForm, String email) {
         LOGGER.warn("Authentication failed: remote address " + request.remoteAddress() + " failed for email " + email);
         if (HttpUtils.isAjax(request)) {
             return badRequest(MessagesStrings.INVALID_USER_OR_PASSWORD);
@@ -99,7 +98,7 @@ public class Authentication extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result logout(Http.Request request) {
+    public Result logout(Request request) {
         LOGGER.info(".logout: " + request.session().getOptional(AuthenticationService.SESSION_USER_EMAIL).get());
         User loggedInUser = authenticationService.getLoggedInUser();
         authenticationService

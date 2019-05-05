@@ -19,7 +19,7 @@ import play.data.FormFactory;
 import play.data.validation.ValidationError;
 import play.db.jpa.Transactional;
 import play.mvc.Controller;
-import play.mvc.Http;
+import play.mvc.Http.Request;
 import play.mvc.Result;
 import services.gui.*;
 import utils.common.HttpUtils;
@@ -64,7 +64,7 @@ public class Users extends Controller {
 
     @Transactional
     @Authenticated(Role.ADMIN)
-    public Result userManager(Http.Request request) {
+    public Result userManager(Request request) {
         User loggedInUser = authenticationService.getLoggedInUser();
         String breadcrumbs = breadcrumbsService.generateForHome(BreadcrumbsService.USER_MANAGER);
         return ok(views.html.gui.user.userManager.render(loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
@@ -104,7 +104,7 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result profile(Http.Request request, String email) throws JatosGuiException {
+    public Result profile(Request request, String email) throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
         checkEmailIsOfLoggedInUser(request, email, loggedInUser);
 
@@ -118,7 +118,7 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result singleUserData(Http.Request request, String email) throws JatosGuiException {
+    public Result singleUserData(Request request, String email) throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
         checkEmailIsOfLoggedInUser(request, email, loggedInUser);
         return ok(jsonUtils.userData(loggedInUser));
@@ -130,9 +130,9 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated(Role.ADMIN)
-    public Result submitCreated() {
+    public Result submitCreated(Request request) {
         User loggedInUser = authenticationService.getLoggedInUser();
-        Form<NewUserModel> form = formFactory.form(NewUserModel.class).bindFromRequest();
+        Form<NewUserModel> form = formFactory.form(NewUserModel.class).bindFromRequest(request);
 
         // Validate via AuthenticationService
         NewUserModel newUser = form.get();
@@ -152,11 +152,11 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitEditedProfile(Http.Request request, String email) throws JatosGuiException {
+    public Result submitEditedProfile(Request request, String email) throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
         checkEmailIsOfLoggedInUser(request, email, loggedInUser);
 
-        Form<ChangeUserProfileModel> form = formFactory.form(ChangeUserProfileModel.class).bindFromRequest();
+        Form<ChangeUserProfileModel> form = formFactory.form(ChangeUserProfileModel.class).bindFromRequest(request);
         if (form.hasErrors()) {
             return badRequest(form.errorsAsJson());
         }
@@ -173,8 +173,8 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitChangedPassword(String emailOfUserToChange) {
-        Form<ChangePasswordModel> form = formFactory.form(ChangePasswordModel.class).bindFromRequest();
+    public Result submitChangedPassword(Request request, String emailOfUserToChange) {
+        Form<ChangePasswordModel> form = formFactory.form(ChangePasswordModel.class).bindFromRequest(request);
 
         // Validate via AuthenticationValidation
         ChangePasswordModel changePasswordModel = form.get();
@@ -204,14 +204,14 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result remove(String emailOfUserToRemove) {
+    public Result remove(Request request, String emailOfUserToRemove) {
         User loggedInUser = authenticationService.getLoggedInUser();
         String loggedInUserEmail = loggedInUser.getEmail();
         if (!loggedInUser.hasRole(Role.ADMIN) && !emailOfUserToRemove.equals(loggedInUserEmail)) {
             return forbidden(MessagesStrings.NOT_ALLOWED_TO_DELETE_USER);
         }
 
-        DynamicForm requestData = formFactory.form().bindFromRequest();
+        DynamicForm requestData = formFactory.form().bindFromRequest(request);
         String password = requestData.get("password");
         if (password == null || !authenticationService.authenticate(loggedInUserEmail, password)) {
             return forbidden(MessagesStrings.WRONG_PASSWORD);
@@ -229,13 +229,12 @@ public class Users extends Controller {
         // If the user removes himself: logout
         if (emailOfUserToRemove.equals(loggedInUserEmail)) {
             authenticationService
-                    .clearSessionCookieAndSessionCache(session(), loggedInUser.getEmail(), request().host());
+                    .clearSessionCookieAndSessionCache(request.session(), loggedInUser.getEmail(), request.host());
         }
         return ok(" "); // jQuery.ajax cannot handle empty responses
     }
 
-    private void checkEmailIsOfLoggedInUser(Http.Request request, String email, User loggedInUser)
-            throws JatosGuiException {
+    private void checkEmailIsOfLoggedInUser(Request request, String email, User loggedInUser) throws JatosGuiException {
         if (!email.toLowerCase().equals(loggedInUser.getEmail())) {
             ForbiddenException e = new ForbiddenException(MessagesStrings.userNotAllowedToGetData(email));
             jatosGuiExceptionThrower.throwRedirect(e, controllers.gui.routes.Home.home(), HttpUtils.isAjax(request));

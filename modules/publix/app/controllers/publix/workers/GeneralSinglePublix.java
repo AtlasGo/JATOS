@@ -126,7 +126,7 @@ public class GeneralSinglePublix extends Publix<GeneralSingleWorker> implements 
             }
         }
         idCookieService.writeIdCookie(worker, batch, studyResult);
-        publixUtils.setUrlQueryParameter(request, studyResult);
+        publixUtils.setUrlQueryParameter(request.queryString(), studyResult);
 
         Component firstComponent = publixUtils.retrieveFirstActiveComponent(study);
         Result result = redirect(controllers.publix.routes.PublixInterceptor

@@ -8,7 +8,6 @@ import general.common.StudyLogger;
 import group.GroupAdministration;
 import models.common.workers.PersonalSingleWorker;
 import models.common.workers.Worker;
-import play.mvc.Http;
 import services.publix.PublixErrorMessages;
 import services.publix.PublixUtils;
 import services.publix.ResultCreator;
@@ -16,7 +15,6 @@ import services.publix.idcookie.IdCookieService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -59,14 +57,11 @@ public class PersonalSinglePublixUtils extends PublixUtils<PersonalSingleWorker>
     }
 
     @Override
-    public Map<String, String> getNonJatosUrlQueryParameters(Http.Request request) {
-        // Flatten Map<String, String[]> to Map<String, String>
-        Map<String, String> queryMap = new HashMap<>();
-        request.queryString().forEach((k, v) -> queryMap.put(k, v[0]));
-        queryMap.remove(PersonalSinglePublix.PERSONAL_SINGLE_WORKER_ID);
-        queryMap.remove("batchId");
-        queryMap.remove("pre");
-        return queryMap;
+    public Map<String, String[]> getNonJatosUrlQueryParameters(Map<String, String[]> queryParameters) {
+        queryParameters.remove(PersonalSinglePublix.PERSONAL_SINGLE_WORKER_ID);
+        queryParameters.remove("batchId");
+        queryParameters.remove("pre");
+        return queryParameters;
     }
 
 }

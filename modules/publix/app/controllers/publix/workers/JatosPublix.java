@@ -130,7 +130,7 @@ public class JatosPublix extends Publix<JatosWorker> implements IPublix {
         }
         publixUtils.finishOldestStudyResult();
         StudyResult studyResult = resultCreator.createStudyResult(study, batch, worker);
-        publixUtils.setUrlQueryParameter(request, studyResult);
+        publixUtils.setUrlQueryParameter(request.queryString(), studyResult);
         idCookieService.writeIdCookie(worker, batch, studyResult, jatosRun);
         studyLogger.log(study, "Started study run with " + JatosWorker.UI_WORKER_TYPE + " worker", batch, worker);
         return redirect(

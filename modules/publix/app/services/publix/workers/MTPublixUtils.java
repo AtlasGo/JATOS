@@ -44,16 +44,14 @@ public class MTPublixUtils extends PublixUtils<MTWorker> {
     }
 
     @Override
-    public Map<String, String> getNonJatosUrlQueryParameters(Http.Request request) {
-        Map<String, String> queryMap = new HashMap<>();
-        request.queryString().forEach((k, v) -> queryMap.put(k, v[0]));
+    public Map<String, String[]> getNonJatosUrlQueryParameters(Map<String, String[]> queryParameters) {
         // Allow MTurk's worker ID: https://github.com/JATOS/JATOS/issues/40
-        // queryMap.remove(MTPublix.MT_WORKER_ID);
-        queryMap.remove(MTPublix.ASSIGNMENT_ID);
-        queryMap.remove("hitId");
-        queryMap.remove("turkSubmitTo");
-        queryMap.remove("batchId");
-        return queryMap;
+        // queryParameters.remove(MTPublix.MT_WORKER_ID);
+        queryParameters.remove(MTPublix.ASSIGNMENT_ID);
+        queryParameters.remove("hitId");
+        queryParameters.remove("turkSubmitTo");
+        queryParameters.remove("batchId");
+        return queryParameters;
     }
 
 }

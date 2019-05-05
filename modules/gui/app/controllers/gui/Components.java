@@ -21,6 +21,7 @@ import play.data.FormFactory;
 import play.db.jpa.Transactional;
 import play.mvc.Controller;
 import play.mvc.Http;
+import play.mvc.Http.Request;
 import play.mvc.Result;
 import services.gui.AuthenticationService;
 import services.gui.Checker;
@@ -78,7 +79,7 @@ public class Components extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result runComponent(Http.Request request, Long studyId, Long componentId, Long batchId)
+    public Result runComponent(Request request, Long studyId, Long componentId, Long batchId)
             throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
         Study study = studyDao.findById(studyId);
@@ -113,12 +114,12 @@ public class Components extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitCreated(Http.Request request, Long studyId) throws JatosGuiException {
+    public Result submitCreated(Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         checkStudyAndLocked(request, studyId, study, loggedInUser);
 
-        Form<ComponentProperties> form = formFactory.form(ComponentProperties.class).bindFromRequest();
+        Form<ComponentProperties> form = formFactory.form(ComponentProperties.class).bindFromRequest(request);
         if (form.hasErrors()) {
             return badRequest(form.errorsAsJson());
         }
@@ -153,13 +154,13 @@ public class Components extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result submitEdited(Http.Request request, Long studyId, Long componentId) throws JatosGuiException {
+    public Result submitEdited(Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         Component component = componentDao.findById(componentId);
         checkStudyAndLockedAndComponent(request, studyId, componentId, study, loggedInUser, component);
 
-        Form<ComponentProperties> form = formFactory.form(ComponentProperties.class).bindFromRequest();
+        Form<ComponentProperties> form = formFactory.form(ComponentProperties.class).bindFromRequest(request);
         if (form.hasErrors()) {
             return badRequest(form.errorsAsJson());
         }
@@ -180,7 +181,7 @@ public class Components extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result toggleActive(Http.Request request, Long studyId, Long componentId, Boolean active)
+    public Result toggleActive(Request request, Long studyId, Long componentId, Boolean active)
             throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
@@ -200,7 +201,7 @@ public class Components extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result cloneComponent(Http.Request request, Long studyId, Long componentId) throws JatosGuiException {
+    public Result cloneComponent(Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         Component component = componentDao.findById(componentId);
@@ -218,7 +219,7 @@ public class Components extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result remove(Http.Request request, Long studyId, Long componentId) throws JatosGuiException {
+    public Result remove(Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
         User loggedInUser = authenticationService.getLoggedInUser();
         Component component = componentDao.findById(componentId);
@@ -229,7 +230,7 @@ public class Components extends Controller {
         return ok(RequestScopeMessaging.getAsJson());
     }
 
-    private void checkStudyAndLocked(Http.Request request, Long studyId, Study study, User loggedInUser)
+    private void checkStudyAndLocked(Request request, Long studyId, Study study, User loggedInUser)
             throws JatosGuiException {
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
@@ -239,7 +240,7 @@ public class Components extends Controller {
         }
     }
 
-    private void checkStudyAndLockedAndComponent(Http.Request request, Long studyId, Long componentId, Study study,
+    private void checkStudyAndLockedAndComponent(Request request, Long studyId, Long componentId, Study study,
             User loggedInUser, Component component) throws JatosGuiException {
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);

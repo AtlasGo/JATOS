@@ -118,7 +118,7 @@ public class MTPublix extends Publix<MTWorker> implements IPublix {
 
         publixUtils.finishOldestStudyResult();
         StudyResult studyResult = resultCreator.createStudyResult(study, batch, worker.get());
-        publixUtils.setUrlQueryParameter(request, studyResult);
+        publixUtils.setUrlQueryParameter(request.queryString(), studyResult);
         idCookieService.writeIdCookie(worker.get(), batch, studyResult);
 
         Component firstComponent = publixUtils.retrieveFirstActiveComponent(study);

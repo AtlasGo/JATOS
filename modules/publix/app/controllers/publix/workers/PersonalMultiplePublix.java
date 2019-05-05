@@ -71,7 +71,7 @@ public class PersonalMultiplePublix extends Publix<PersonalMultipleWorker> imple
 
         publixUtils.finishOldestStudyResult();
         StudyResult studyResult = resultCreator.createStudyResult(study, batch, worker);
-        publixUtils.setUrlQueryParameter(request, studyResult);
+        publixUtils.setUrlQueryParameter(request.queryString(), studyResult);
         idCookieService.writeIdCookie(worker, batch, studyResult);
 
         Component firstComponent = publixUtils.retrieveFirstActiveComponent(study);

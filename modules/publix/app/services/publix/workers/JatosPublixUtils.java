@@ -82,12 +82,10 @@ public class JatosPublixUtils extends PublixUtils<JatosWorker> {
     }
 
     @Override
-    public Map<String, String> getNonJatosUrlQueryParameters(Http.Request request) {
-        Map<String, String> queryMap = new HashMap<>();
-        request.queryString().forEach((k, v) -> queryMap.put(k, v[0]));
-        queryMap.remove(JatosPublix.JATOS_WORKER_ID);
-        queryMap.remove("batchId");
-        return queryMap;
+    public Map<String, String[]> getNonJatosUrlQueryParameters(Map<String, String[]> queryParameters) {
+        queryParameters.remove(JatosPublix.JATOS_WORKER_ID);
+        queryParameters.remove("batchId");
+        return queryParameters;
     }
 
 }

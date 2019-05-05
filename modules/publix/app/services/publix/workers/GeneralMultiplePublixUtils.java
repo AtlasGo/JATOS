@@ -8,14 +8,12 @@ import general.common.StudyLogger;
 import group.GroupAdministration;
 import models.common.workers.GeneralMultipleWorker;
 import models.common.workers.Worker;
-import play.mvc.Http;
 import services.publix.PublixUtils;
 import services.publix.ResultCreator;
 import services.publix.idcookie.IdCookieService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -45,12 +43,10 @@ public class GeneralMultiplePublixUtils extends PublixUtils<GeneralMultipleWorke
     }
 
     @Override
-    public Map<String, String> getNonJatosUrlQueryParameters(Http.Request request) {
-        Map<String, String> queryMap = new HashMap<>();
-        request.queryString().forEach((k, v) -> queryMap.put(k, v[0]));
-        queryMap.remove(GeneralMultiplePublix.GENERALMULTIPLE);
-        queryMap.remove("batchId");
-        return queryMap;
+    public Map<String, String[]> getNonJatosUrlQueryParameters(Map<String, String[]> queryParameters) {
+        queryParameters.remove(GeneralMultiplePublix.GENERALMULTIPLE);
+        queryParameters.remove("batchId");
+        return queryParameters;
     }
 
 }

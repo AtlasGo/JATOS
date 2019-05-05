@@ -20,8 +20,10 @@ import models.common.workers.Worker;
 import play.Logger;
 import play.Logger.ALogger;
 import play.db.jpa.Transactional;
+import play.libs.Files.TemporaryFile;
 import play.mvc.Controller;
 import play.mvc.Http;
+import play.mvc.Http.MultipartFormData;
 import play.mvc.Http.MultipartFormData.FilePart;
 import play.mvc.Result;
 import services.gui.*;
@@ -84,12 +86,12 @@ public class ImportExport extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result importStudy() throws JatosGuiException {
+    public Result importStudy(Http.Request request) throws JatosGuiException {
         User loggedInUser = authenticationService.getLoggedInUser();
 
         // Get file from request
-        FilePart<Object> filePart = request().body().asMultipartFormData().getFile(Study.STUDY);
-
+        MultipartFormData<TemporaryFile> body = request.body().asMultipartFormData();
+        FilePart<TemporaryFile> filePart = body.getFile(Study.STUDY);
         if (filePart == null) {
             jatosGuiExceptionThrower.throwAjax(MessagesStrings.FILE_MISSING, Http.Status.BAD_REQUEST);
         }
@@ -100,7 +102,7 @@ public class ImportExport extends Controller {
 
         JsonNode responseJson = null;
         try {
-            File file = (File) filePart.getFile();
+            File file = filePart.getRef().path().toFile();
             responseJson = importExportService.importStudy(loggedInUser, file);
         } catch (Exception e) {
             importExportService.cleanupAfterStudyImport();
@@ -210,7 +212,8 @@ public class ImportExport extends Controller {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStudyLocked(study);
 
-            FilePart<Object> filePart = request.body().asMultipartFormData().getFile(Component.COMPONENT);
+            MultipartFormData<TemporaryFile> body = request.body().asMultipartFormData();
+            FilePart<TemporaryFile> filePart = body.getFile(Component.COMPONENT);
             json = importExportService.importComponent(study, filePart);
         } catch (ForbiddenException | BadRequestException | IOException e) {
             importExportService.cleanupAfterComponentImport();

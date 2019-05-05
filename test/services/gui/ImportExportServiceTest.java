@@ -20,6 +20,7 @@ import play.Environment;
 import play.db.jpa.JPAApi;
 import play.inject.guice.GuiceApplicationBuilder;
 import play.inject.guice.GuiceApplicationLoader;
+import play.libs.Files;
 import play.libs.Json;
 import play.mvc.Http;
 import play.mvc.Http.MultipartFormData.FilePart;
@@ -102,8 +103,9 @@ public class ImportExportServiceTest {
 
         // First component of the study is the one in the component file
         File componentFile = getExampleComponentFile();
-        FilePart<File> filePart = new FilePart<>(Component.COMPONENT,
-                componentFile.getName(), "multipart/form-data", componentFile);
+        Files.TemporaryFile componentTmpFile = new Files.SingletonTemporaryFileCreator().create(componentFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Component.COMPONENT, componentFile.getName(),
+                "multipart/form-data", componentTmpFile);
 
         // Call importComponent()
         ObjectNode jsonNode = jpaApi.withTransaction(() -> {
@@ -171,8 +173,9 @@ public class ImportExportServiceTest {
     public void importNewComponent() throws Exception {
         Study study = testHelper.createAndPersistExampleStudyForAdmin(injector);
         File componentFile = getExampleComponentFile();
-        FilePart<File> filePart = new FilePart<>(Component.COMPONENT,
-                componentFile.getName(), "multipart/form-data", componentFile);
+        Files.TemporaryFile componentTmpFile = new Files.SingletonTemporaryFileCreator().create(componentFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Component.COMPONENT, componentFile.getName(),
+                "multipart/form-data", componentTmpFile);
 
         // Remove the last component (so we can import it again later on)
         Study studyWithoutLast = jpaApi.withTransaction(() -> {
@@ -182,8 +185,7 @@ public class ImportExportServiceTest {
         });
 
         // Check that the last component is removed
-        assertThat(studyWithoutLast.getLastComponent().get().getTitle())
-                .isNotEqualTo("Quit button");
+        assertThat(studyWithoutLast.getLastComponent().get().getTitle()).isNotEqualTo("Quit button");
 
         // Import 1. part: Call importComponent()
         ObjectNode jsonNode = jpaApi.withTransaction(() -> {
@@ -239,15 +241,15 @@ public class ImportExportServiceTest {
     public void importNewStudy() throws Exception {
         // Import 1. part: Call importStudy()
         File studyFile = getExampleStudyFile();
-        FilePart<File> filePart =
-                new FilePart<>(Study.STUDY, studyFile.getName(), "multipart/form-data", studyFile);
-        ObjectNode jsonNode = importStudy(filePart.getFile());
+        Files.TemporaryFile studyTmpFile = new Files.SingletonTemporaryFileCreator().create(studyFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Study.STUDY, studyFile.getName(), "multipart/form-data",
+                studyTmpFile);
+        ObjectNode jsonNode = importStudy(filePart.getRef().path().toFile());
 
         // Check returned JSON object
         assertThat(jsonNode.get("studyExists").asBoolean()).isFalse();
         assertThat(jsonNode.get("uploadedStudyTitle").asText()).isEqualTo("Basic Example Study");
-        assertThat(jsonNode.get("uploadedStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("uploadedStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("uploadedDirName").asText()).isEqualTo("basic_example_study");
         assertThat(jsonNode.get("uploadedDirExists").asBoolean()).isFalse();
 
@@ -287,19 +289,18 @@ public class ImportExportServiceTest {
 
         // Import 1. call: importStudy()
         File studyFile = getExampleStudyFile();
-        FilePart<File> filePart = new FilePart<>(Study.STUDY,
-                studyFile.getName(), "multipart/form-data", studyFile);
-        ObjectNode jsonNode = importStudy(filePart.getFile());
+        Files.TemporaryFile studyTmpFile = new Files.SingletonTemporaryFileCreator().create(studyFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Study.STUDY, studyFile.getName(), "multipart/form-data",
+                studyTmpFile);
+        ObjectNode jsonNode = importStudy(filePart.getRef().path().toFile());
 
         // Check returned JSON object
         assertThat(jsonNode.get("studyExists").asBoolean()).isTrue();
         assertThat(jsonNode.get("currentStudyTitle").asText()).isEqualTo("Another Title");
-        assertThat(jsonNode.get("currentStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("currentStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("currentDirName").asText()).isEqualTo("another_example_dirname");
         assertThat(jsonNode.get("uploadedStudyTitle").asText()).isEqualTo("Basic Example Study");
-        assertThat(jsonNode.get("uploadedStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("uploadedStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("uploadedDirName").asText()).isEqualTo("basic_example_study");
         assertThat(jsonNode.get("uploadedDirExists").asBoolean()).isFalse();
 
@@ -338,9 +339,10 @@ public class ImportExportServiceTest {
 
         // Import 1. call: importStudy()
         File studyFile = getExampleStudyFile();
-        FilePart<File> filePart = new FilePart<>(Study.STUDY,
-                studyFile.getName(), "multipart/form-data", studyFile);
-        importStudy(filePart.getFile());
+        Files.TemporaryFile studyTmpFile = new Files.SingletonTemporaryFileCreator().create(studyFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Study.STUDY, studyFile.getName(), "multipart/form-data",
+                studyTmpFile);
+        importStudy(filePart.getRef().path().toFile());
 
         // Import 2. call: importStudyConfirmed(): Allow properties and assets to be overwritten
         ObjectNode node = Json.mapper().createObjectNode();
@@ -384,9 +386,10 @@ public class ImportExportServiceTest {
 
         // Import 1. call: importStudy()
         File studyFile = getExampleStudyFile();
-        FilePart<File> filePart = new FilePart<>(Study.STUDY,
-                studyFile.getName(), "multipart/form-data", studyFile);
-        importStudy(filePart.getFile());
+        Files.TemporaryFile studyTmpFile = new Files.SingletonTemporaryFileCreator().create(studyFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Study.STUDY, studyFile.getName(), "multipart/form-data",
+                studyTmpFile);
+        importStudy(filePart.getRef().path().toFile());
 
         // Import 2. call: importStudyConfirmed(): Allow properties and assets to be overwritten
         ObjectNode node = Json.mapper().createObjectNode();
@@ -422,15 +425,15 @@ public class ImportExportServiceTest {
 
         // Import 1. call: importStudy()
         File studyFile = getExampleStudyFile();
-        FilePart<File> filePart = new FilePart<>(Study.STUDY,
-                studyFile.getName(), "multipart/form-data", studyFile);
-        ObjectNode jsonNode = importStudy(filePart.getFile());
+        Files.TemporaryFile studyTmpFile = new Files.SingletonTemporaryFileCreator().create(studyFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Study.STUDY, studyFile.getName(), "multipart/form-data",
+                studyTmpFile);
+        ObjectNode jsonNode = importStudy(filePart.getRef().path().toFile());
 
         // Check returned JSON object
         assertThat(jsonNode.get("studyExists").asBoolean()).isFalse();
         assertThat(jsonNode.get("uploadedStudyTitle").asText()).isEqualTo("Basic Example Study");
-        assertThat(jsonNode.get("uploadedStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("uploadedStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("uploadedDirName").asText()).isEqualTo("basic_example_study");
         assertThat(jsonNode.get("uploadedDirExists").asBoolean()).isTrue();
 
@@ -441,8 +444,8 @@ public class ImportExportServiceTest {
         node.put("renameDir", true);
         importStudyConfirmed(node);
 
-        Study importedStudy = jpaApi.withTransaction(
-                () -> studyDao.findByUuid("5c85bd82-0258-45c6-934a-97ecc1ad6617").get());
+        Study importedStudy = jpaApi
+                .withTransaction(() -> studyDao.findByUuid("5c85bd82-0258-45c6-934a-97ecc1ad6617").get());
         // Check that properties are unchanged
         assertThat(importedStudy.getTitle()).isEqualTo("Basic Example Study");
         // Check that assets are renamed (have '_2' suffix)
@@ -475,19 +478,18 @@ public class ImportExportServiceTest {
 
         // Import 1. call: importStudy()
         File studyFile = getExampleStudyFile();
-        FilePart<File> filePart = new FilePart<>(Study.STUDY,
-                studyFile.getName(), "multipart/form-data", studyFile);
-        ObjectNode jsonNode = importStudy(filePart.getFile());
+        Files.TemporaryFile studyTmpFile = new Files.SingletonTemporaryFileCreator().create(studyFile.toPath());
+        FilePart<Files.TemporaryFile> filePart = new FilePart<>(Study.STUDY, studyFile.getName(), "multipart/form-data",
+                studyTmpFile);
+        ObjectNode jsonNode = importStudy(filePart.getRef().path().toFile());
 
         // Check returned JSON object
         assertThat(jsonNode.get("studyExists").asBoolean()).isTrue();
         assertThat(jsonNode.get("currentStudyTitle").asText()).isEqualTo("Another Title");
-        assertThat(jsonNode.get("currentStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("currentStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("currentDirName").asText()).isEqualTo("another_example_dirname");
         assertThat(jsonNode.get("uploadedStudyTitle").asText()).isEqualTo("Basic Example Study");
-        assertThat(jsonNode.get("uploadedStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("uploadedStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("uploadedDirName").asText()).isEqualTo("basic_example_study");
         assertThat(jsonNode.get("uploadedDirExists").asBoolean()).isTrue();
 
@@ -523,12 +525,10 @@ public class ImportExportServiceTest {
         // Check returned JSON object
         assertThat(jsonNode.get("studyExists").asBoolean()).isTrue();
         assertThat(jsonNode.get("currentStudyTitle").asText()).isEqualTo("Basic Example Study");
-        assertThat(jsonNode.get("currentStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("currentStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("currentDirName").asText()).isEqualTo("basic_example_study");
         assertThat(jsonNode.get("uploadedStudyTitle").asText()).isEqualTo("Basic Example Study");
-        assertThat(jsonNode.get("uploadedStudyUuid").asText())
-                .isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
+        assertThat(jsonNode.get("uploadedStudyUuid").asText()).isEqualTo("5c85bd82-0258-45c6-934a-97ecc1ad6617");
         assertThat(jsonNode.get("uploadedDirName").asText()).isEqualTo("basic_example_study");
         assertThat(jsonNode.get("uploadedDirExists").asBoolean()).isTrue();
 

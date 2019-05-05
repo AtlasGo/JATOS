@@ -9,7 +9,6 @@ import models.common.User;
 import models.common.User.Role;
 import play.Logger;
 import play.Logger.ALogger;
-import play.db.jpa.JPAApi;
 import play.db.jpa.Transactional;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -37,7 +36,6 @@ public class Home extends Controller {
 
     private static final ALogger LOGGER = Logger.of(Home.class);
 
-    private final JPAApi jpa;
     private final JsonUtils jsonUtils;
     private final AuthenticationService authenticationService;
     private final BreadcrumbsService breadcrumbsService;
@@ -46,9 +44,8 @@ public class Home extends Controller {
     private final JatosUpdater jatosUpdater;
 
     @Inject
-    Home(JPAApi jpa, JsonUtils jsonUtils, AuthenticationService authenticationService, BreadcrumbsService breadcrumbsService,
+    Home(JsonUtils jsonUtils, AuthenticationService authenticationService, BreadcrumbsService breadcrumbsService,
             StudyDao studyDao, LogFileReader logFileReader, JatosUpdater jatosUpdater) {
-        this.jpa = jpa;
         this.jsonUtils = jsonUtils;
         this.authenticationService = authenticationService;
         this.breadcrumbsService = breadcrumbsService;

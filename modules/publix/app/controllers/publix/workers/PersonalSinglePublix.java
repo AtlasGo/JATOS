@@ -104,7 +104,7 @@ public class PersonalSinglePublix extends Publix<PersonalSingleWorker> implement
             }
         }
         idCookieService.writeIdCookie(worker, batch, studyResult.get());
-        publixUtils.setUrlQueryParameter(request, studyResult.get());
+        publixUtils.setUrlQueryParameter(request.queryString(), studyResult.get());
 
         Component component = publixUtils.retrieveFirstActiveComponent(study);
         studyLogger

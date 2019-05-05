@@ -72,7 +72,7 @@ public class Tests extends Controller {
     public Result testCache() {
         try {
             cache.set("test", "testValue");
-            String value = cache.get("test");
+            String value = cache.getOptional("test").get();
             if (!value.equals("testValue")) {
                 return badRequest();
             }
