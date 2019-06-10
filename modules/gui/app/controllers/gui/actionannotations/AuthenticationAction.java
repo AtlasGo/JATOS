@@ -28,42 +28,41 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
- * This class defines the @Authenticated annotation used in JATOS GUI
- * controllers. It checks Play's session cookie and the cached user session.
- * Additionally it does authorization. It has several layers of security:
- * <p>
- * 1) First it checks if an email is in Play's session cookie and if this email
- * belongs to a user in the database.
- * <p>
- * 2) We check whether the session ID stored in Play's session cookie is the
- * same as stored in the UserSession in the cache. After a user logs out this
- * session ID is deleted in the cache and from the session cookie and thus
- * subsequent log-ins will fail.
- * <p>
- * 3) Check if the session timed out. The time span is defined in the
- * application.conf.
- * <p>
- * 4) Check if the session timed out due to inactivity of the user. With each
- * request by the user the time of last activity gets refreshed in the session.
- * <p>
- * 5) Check if the logged-in user has the proper Role needed to access this
- * page. This Role is an optional parameter in the @Authenticated annotation.
- * <p>
- * The @Authenticated annotation does not check the user's password. This is
- * done once during login (class {@link Authentication}).
- * <p>
- * IMPORTANT: Since this annotation accesses the database the annotated method
- * has to be within a transaction. This means the @Transactional annotation has
- * to be BEFORE the @Authenticated annotation.
+ * This class defines the @Authenticated annotation used in JATOS GUI controllers. It checks Play's session cookie and
+ * the user session cache. Additionally it does authorization. It has several layers of security:
  *
- * @author Kristian Lange (2015 - 2017)
+ * 1) First it checks if an email is in Play's session cookie and if this email belongs to a user in the database.
+ *
+ * 2) We check whether the session ID stored in Play's session cookie is the same as the one stored in the UserSession
+ * in the cache. After a user logs out, this session ID is deleted from the cache and from the session cookie and thus
+ * subsequent attempts to authenticate will fail.
+ *
+ * 3) The session ID is stored together with request's remote address (usually IP or host). And subsequent request are
+ * only authenticated if they come from the same remote address (this makes session hijacking difficult). To allow
+ * multiple logins from the same user at the same time from different computers, several remote addresses together with
+ * their session ID can be stored.
+ *
+ * 4) Check if the session timed out. The time span is defined in the application.conf.
+ *
+ * 5) Check if the session timed out due to inactivity of the user. With each request by the user the time of last
+ * activity gets refreshed in the session.
+ *
+ * 6) Check if the logged-in user has the proper Role needed to access this page. This Role is an optional parameter in
+ * the @Authenticated annotation.
+ *
+ * The @Authenticated annotation does not check the user's password. This is done once during login (class {@link
+ * Authentication}).
+ *
+ * IMPORTANT: Since this annotation accesses the database the annotated method has to be within a transaction. This
+ * means the @Transactional annotation has to be BEFORE the @Authenticated annotation.
+ *
+ * @author Kristian Lange (2015 - 2019)
  */
 public class AuthenticationAction extends Action<Authenticated> {
 
     /**
-     * This @Authenticated annotation can be used on every controller action
-     * where authentication and authorization is required. If no Role is added
-     * than the default Role 'USER' is assumed.
+     * This @Authenticated annotation can be used on every controller action where authentication and authorization is
+     * required. If no Role is added than the default Role 'USER' is assumed.
      */
     @With(AuthenticationAction.class)
     @Target({ ElementType.TYPE, ElementType.METHOD })

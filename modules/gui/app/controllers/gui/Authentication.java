@@ -20,9 +20,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
- * Controller that deals with login/logout. There are two login views: 1) login
- * HTML page, and 2) an overlay. The second one is triggered by a session
- * timeout or an inactivity timeout in JavaScript.
+ * Controller that deals with login/logout. There are two login views: 1) login HTML page, and 2) an overlay. The second
+ * one is triggered by a session timeout or an inactivity timeout in JavaScript.
  *
  * @author Kristian Lange
  */
@@ -49,8 +48,7 @@ public class Authentication extends Controller {
     }
 
     /**
-     * HTTP POST Endpoint for the login form. It handles both Ajax and normal
-     * requests.
+     * HTTP POST Endpoint for the login form. It handles both Ajax and normal requests.
      */
     @Transactional
     public Result authenticate(Request request) {
