@@ -19,8 +19,7 @@ import javax.inject.Singleton;
 import java.io.File;
 
 /**
- * Controller with endpoints used by /jatos/test. Each endpoint test a different
- * aspect of JATOS.
+ * Controller with endpoints used by /jatos/test. Each endpoint test a different aspect of JATOS.
  *
  * @author Kristian Lange (2017)
  */
@@ -28,17 +27,19 @@ import java.io.File;
 @Singleton
 public class Tests extends Controller {
 
-    private final UserDao      userDao;
+    private final UserDao userDao;
     private final SyncCacheApi cache;
 
     @Inject
-    Tests(UserDao userDao, @NamedCache("user-session-cache") SyncCacheApi cache) {
+    Tests(UserDao userDao,
+            @NamedCache("user-session-cache")
+                    SyncCacheApi cache) {
         this.userDao = userDao;
         this.cache = cache;
     }
 
-    public Result test(Http.Request request) {
-        return ok(views.html.gui.test.render(request));
+    public Result test() {
+        return ok(views.html.gui.test.render());
     }
 
     @Transactional
@@ -72,7 +73,7 @@ public class Tests extends Controller {
     public Result testCache() {
         try {
             cache.set("test", "testValue");
-            String value = cache.getOptional("test").get();
+            String value = cache.get("test");
             if (!value.equals("testValue")) {
                 return badRequest();
             }

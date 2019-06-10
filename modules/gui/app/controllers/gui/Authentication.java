@@ -61,7 +61,8 @@ public class Authentication extends Controller {
         } else if (!authenticationService.authenticate(email, password)) {
             return returnBadRequestDueToFailedAuth(request, loginForm, email);
         } else {
-            authenticationService.writeSessionCookieAndSessionCache(request.session(), email, request.remoteAddress());
+            authenticationService
+                    .writeSessionCookieAndUserSessionCache(request.session(), email, request.remoteAddress());
             if (HttpUtils.isAjax(request)) {
                 return ok(" "); // jQuery.ajax cannot handle empty responses
             } else {
@@ -99,8 +100,8 @@ public class Authentication extends Controller {
     public Result logout(Request request) {
         LOGGER.info(".logout: " + request.session().getOptional(AuthenticationService.SESSION_USER_EMAIL).get());
         User loggedInUser = authenticationService.getLoggedInUser();
-        authenticationService
-                .clearSessionCookieAndSessionCache(request.session(), loggedInUser.getEmail(), request.remoteAddress());
+        authenticationService.clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(),
+                request.remoteAddress());
         FlashScopeMessaging.success("You've been logged out.");
         return redirect(controllers.gui.routes.Authentication.login());
     }

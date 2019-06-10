@@ -113,8 +113,7 @@ public class Users extends Controller {
     }
 
     /**
-     * Ajax GET request: Returns data of the user that belongs to the given
-     * email
+     * Ajax GET request: Returns data of the user that belongs to the given email
      */
     @Transactional
     @Authenticated
@@ -125,8 +124,7 @@ public class Users extends Controller {
     }
 
     /**
-     * Handles POST request of user create form. Only users with Role ADMIN are
-     * allowed to create new users.
+     * Handles POST request of user create form. Only users with Role ADMIN are allowed to create new users.
      */
     @Transactional
     @Authenticated(Role.ADMIN)
@@ -147,8 +145,8 @@ public class Users extends Controller {
     }
 
     /**
-     * Handles POST request of user edit profile form (so far it's only the
-     * user's name - password is handled in another method).
+     * Handles POST request of user edit profile form (so far it's only the user's name - password is handled in another
+     * method).
      */
     @Transactional
     @Authenticated
@@ -168,8 +166,7 @@ public class Users extends Controller {
     }
 
     /**
-     * Handles POST request of change password form. Can be either origin in the
-     * user manager or in the user profile.
+     * Handles POST request of change password form. Can be either origin in the user manager or in the user profile.
      */
     @Transactional
     @Authenticated
@@ -196,11 +193,9 @@ public class Users extends Controller {
     }
 
     /**
-     * POST request to delete a user. Is called from user manager and user
-     * profile.
+     * POST request to delete a user. Is called from user manager and user profile.
      * <p>
-     * It can't be a HTTP DELETE because it contains form data and Play doesn't
-     * handle body data in a DELETE request.
+     * It can't be a HTTP DELETE because it contains form data and Play doesn't handle body data in a DELETE request.
      */
     @Transactional
     @Authenticated
@@ -229,7 +224,7 @@ public class Users extends Controller {
         // If the user removes himself: logout
         if (emailOfUserToRemove.equals(loggedInUserEmail)) {
             authenticationService
-                    .clearSessionCookieAndSessionCache(request.session(), loggedInUser.getEmail(), request.host());
+                    .clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(), request.host());
         }
         return ok(" "); // jQuery.ajax cannot handle empty responses
     }

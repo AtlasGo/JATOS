@@ -105,14 +105,14 @@ public class AuthenticationAction extends Action<Authenticated> {
 
         // Check session timeout
         if (authenticationService.isSessionTimeout(request.session())) {
-            authenticationService.clearSessionCookieAndSessionCache(request.session(), loggedInUser.getEmail(),
+            authenticationService.clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(),
                     request.remoteAddress());
             return callForbiddenDueToSessionTimeout(request, loggedInUser.getEmail());
         }
 
         // Check inactivity timeout
         if (authenticationService.isInactivityTimeout(request.session())) {
-            authenticationService.clearSessionCookieAndSessionCache(request.session(), loggedInUser.getEmail(),
+            authenticationService.clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(),
                     request.remoteAddress());
             return callForbiddenDueToInactivityTimeout(request, loggedInUser.getEmail());
         }
