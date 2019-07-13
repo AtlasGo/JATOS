@@ -7,10 +7,10 @@ import controllers.gui.actionannotations.GuiAccessLoggingAction.GuiAccessLogging
 import daos.common.ComponentDao;
 import daos.common.StudyDao;
 import daos.common.worker.WorkerDao;
-import exceptions.gui.BadRequestException;
-import exceptions.gui.ForbiddenException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.ForbiddenException;
 import exceptions.gui.JatosGuiException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.NotFoundException;
 import general.common.MessagesStrings;
 import general.gui.RequestScopeMessaging;
 import models.common.Component;
@@ -80,89 +80,91 @@ public class ImportExport extends Controller {
     /**
      * Ajax request
      * <p>
-     * Checks whether this is a legitimate study import, whether the study or
-     * its directory already exists. The actual import happens in
-     * importStudyConfirmed(). Returns JSON.
+     * Checks whether this is a legitimate study import, whether the study or its directory already exists. The actual
+     * import happens in importStudyConfirmed(). Returns JSON.
      */
     @Transactional
     @Authenticated
-    public Result importStudy(Http.Request request) throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    public Result importStudy(Http.Request request) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
 
         // Get file from request
         MultipartFormData<TemporaryFile> body = request.body().asMultipartFormData();
         FilePart<TemporaryFile> filePart = body.getFile(Study.STUDY);
         if (filePart == null) {
-            jatosGuiExceptionThrower.throwAjax(MessagesStrings.FILE_MISSING, Http.Status.BAD_REQUEST);
+            return badRequest("File missing");
         }
         if (!Study.STUDY.equals(filePart.getKey())) {
             // If wrong key the upload comes from wrong form
-            jatosGuiExceptionThrower.throwAjax(MessagesStrings.NO_STUDY_UPLOAD, Http.Status.BAD_REQUEST);
+            return badRequest("Uploaded file isn't intended for studies");
         }
 
-        JsonNode responseJson = null;
+        JsonNode responseJson;
         try {
             File file = filePart.getRef().path().toFile();
             responseJson = importExportService.importStudy(loggedInUser, file);
         } catch (Exception e) {
-            importExportService.cleanupAfterStudyImport();
-            jatosGuiExceptionThrower.throwAjax(e);
+            importExportService.cleanupAfterStudyImport(request.session());
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
-        return ok(responseJson);
+        // Remember study assets' dir name in session
+        String tmpDirName = responseJson.get(ImportExportService.TEMP_STUDY_DIR).asText();
+        return ok(responseJson).addingToSession(request, ImportExportService.TEMP_STUDY_DIR, tmpDirName);
     }
 
     /**
      * Ajax request
      * <p>
-     * Actual import of study and its study assets directory. Always subsequent
-     * of an importStudy() call.
+     * Actual import of study and its study assets directory. Always subsequent of an importStudy() call.
      */
     @Transactional
     @Authenticated
-    public Result importStudyConfirmed(Http.Request request) throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    public Result importStudyConfirmed(Http.Request request) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
 
         // Get confirmation: overwrite study's properties and/or study assets
         JsonNode json = request.body().asJson();
         try {
-            importExportService.importStudyConfirmed(loggedInUser, json);
+            request = importExportService.importStudyConfirmed(request, loggedInUser, json);
         } catch (Exception e) {
-            jatosGuiExceptionThrower.throwHome(request, e, HttpUtils.isAjax(request));
+            return status(HttpUtils.getHttpStatus(e), e.getMessage()).removingFromSession(request,
+                    ImportExportService.TEMP_STUDY_DIR);
         } finally {
-            importExportService.cleanupAfterStudyImport();
+            importExportService.cleanupAfterStudyImport(request.session());
         }
-        return ok(RequestScopeMessaging.getAsJson());
+        return ok(RequestScopeMessaging.getAsJson(request)).removingFromSession(request,
+                ImportExportService.TEMP_STUDY_DIR);
     }
 
     /**
      * Ajax request
      * <p>
-     * Export a study. Returns a .zip file that contains the study asset
-     * directory and the study as JSON as a .jas file.
+     * Export a study. Returns a .zip file that contains the study asset directory and the study as JSON as a .jas
+     * file.
      */
     @Transactional
     @Authenticated
-    public Result exportStudy(Long studyId) throws JatosGuiException {
+    public Result exportStudy(Http.Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
         } catch (ForbiddenException | BadRequestException e) {
             jatosGuiExceptionThrower.throwAjax(e);
         }
 
-        File zipFile = null;
+        File zipFile;
         try {
             zipFile = importExportService.createStudyExportZipFile(study);
         } catch (IOException e) {
-            String errorMsg = MessagesStrings.studyExportFailure(studyId, study.getTitle());
+            String errorMsg = "Export of study \"" + study.getTitle() + "\" (ID " + studyId + ") failed.";
             LOGGER.error(".exportStudy: " + errorMsg, e);
-            jatosGuiExceptionThrower.throwAjax(errorMsg, Http.Status.INTERNAL_SERVER_ERROR);
+            return status(HttpUtils.getHttpStatus(e), errorMsg);
         }
 
         String zipFileName = ioUtils.generateFileName(study.getTitle(), IOUtils.ZIP_FILE_SUFFIX);
-        response().setHeader("Content-disposition", "attachment; filename=" + zipFileName);
-        return ok(zipFile).as("application/x-download");
+        return ok(zipFile).as("application/x-download").withHeader("Content-disposition",
+                "attachment; filename=" + zipFileName);
     }
 
     /**
@@ -172,42 +174,43 @@ public class ImportExport extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result exportComponent(Long studyId, Long componentId) throws JatosGuiException {
+    public Result exportComponent(Http.Request request, Long studyId, Long componentId) {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStandardForComponents(studyId, componentId, component);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
 
-        JsonNode componentAsJson = null;
+        JsonNode componentAsJson;
         try {
             componentAsJson = jsonUtils.componentAsJsonForIO(component);
         } catch (IOException e) {
-            String errorMsg = MessagesStrings.componentExportFailure(componentId, component.getTitle());
-            jatosGuiExceptionThrower.throwAjax(errorMsg, Http.Status.INTERNAL_SERVER_ERROR);
+            String errorMsg =
+                    "Failure during export of component \"" + component.getTitle() + "\" (ID " + componentId + ")";
+            return status(HttpUtils.getHttpStatus(e), errorMsg);
         }
 
         String filename = ioUtils.generateFileName(component.getTitle(), IOUtils.COMPONENT_FILE_SUFFIX);
-        response().setHeader("Content-disposition", "attachment; filename=" + filename);
-        return ok(componentAsJson).as("application/x-download");
+        return ok(componentAsJson).as("application/x-download").withHeader("Content-disposition",
+                "attachment; filename=" + filename);
     }
 
     /**
      * Ajax request
      * <p>
-     * Checks whether this is a legitimate component import. The actual import
-     * happens in importComponentConfirmed(). Returns JSON with the results.
+     * Checks whether this is a legitimate component import. The actual import happens in importComponentConfirmed().
+     * Returns JSON with the results.
      */
     @Transactional
     @Authenticated
-    public Result importComponent(Http.Request request, Long studyId) throws JatosGuiException {
+    public Result importComponent(Http.Request request, Long studyId) {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
-        ObjectNode json = null;
+        User loggedInUser = authenticationService.getLoggedInUser(request);
+        ObjectNode json;
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStudyLocked(study);
@@ -216,10 +219,12 @@ public class ImportExport extends Controller {
             FilePart<TemporaryFile> filePart = body.getFile(Component.COMPONENT);
             json = importExportService.importComponent(study, filePart);
         } catch (ForbiddenException | BadRequestException | IOException e) {
-            importExportService.cleanupAfterComponentImport();
-            jatosGuiExceptionThrower.throwStudy(request, e, study.getId());
+            importExportService.cleanupAfterComponentImport(request.session());
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
-        return ok(json);
+        // Remember component's file name
+        String tmpFileName = json.get(ImportExportService.TEMP_COMPONENT_FILE).asText();
+        return ok(json).addingToSession(request, ImportExportService.TEMP_COMPONENT_FILE, tmpFileName);
     }
 
     /**
@@ -229,42 +234,40 @@ public class ImportExport extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result importComponentConfirmed(Http.Request request, Long studyId) throws JatosGuiException {
+    public Result importComponentConfirmed(Http.Request request, Long studyId) {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
 
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStudyLocked(study);
-            String tempComponentFileName = request.session()
-                    .getOptional(ImportExportService.SESSION_TEMP_COMPONENT_FILE).get();
-            importExportService.importComponentConfirmed(study, tempComponentFileName);
+
+            request = importExportService.importComponentConfirmed(request, study);
         } catch (Exception e) {
-            jatosGuiExceptionThrower.throwStudy(request, e, study.getId());
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         } finally {
-            importExportService.cleanupAfterComponentImport();
+            importExportService.cleanupAfterComponentImport(request.session());
         }
-        return ok(RequestScopeMessaging.getAsJson());
+        return ok(RequestScopeMessaging.getAsJson(request));
     }
 
     /**
      * Ajax request (uses download.js on the client side)
      * <p>
-     * Returns all result data of ComponentResults belonging to the given StudyResults. The
-     * StudyResults are specified by their IDs in the request's body. Returns the result data as
-     * text, each line a result data.
+     * Returns all result data of ComponentResults belonging to the given StudyResults. The StudyResults are specified
+     * by their IDs in the request's body. Returns the result data as text, each line a result data.
      */
     @Transactional
     @Authenticated
-    public Result exportDataOfStudyResults() throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    public Result exportDataOfStudyResults(Http.Request request) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         List<Long> studyResultIdList = new ArrayList<>();
-        request().body().asJson().get("resultIds").forEach(node -> studyResultIdList.add(node.asLong()));
-        String resultData = "";
+        request.body().asJson().get("resultIds").forEach(node -> studyResultIdList.add(node.asLong()));
+        String resultData;
         try {
             resultData = resultDataExportService.fromStudyResultIdList(studyResultIdList, loggedInUser);
         } catch (ForbiddenException | BadRequestException | NotFoundException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
         return ok(resultData);
     }
@@ -272,24 +275,25 @@ public class ImportExport extends Controller {
     /**
      * Ajax request  (uses download.js on the client side)
      * <p>
-     * Returns all result data of ComponentResults belonging to StudyResults belonging to the
-     * given study. Returns the result data as text, each line a result data.
+     * Returns all result data of ComponentResults belonging to StudyResults belonging to the given study. Returns the
+     * result data as text, each line a result data.
      */
     @Transactional
     @Authenticated
-    public Result exportDataOfAllStudyResults(Long studyId) throws JatosGuiException {
+    public Result exportDataOfAllStudyResults(Http.Request request, Long studyId) {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
-        String resultData = "";
+
+        String resultData;
         try {
             resultData = resultDataExportService.forStudy(loggedInUser, study);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
         return ok(resultData);
     }
@@ -297,20 +301,20 @@ public class ImportExport extends Controller {
     /**
      * Ajax request (uses download.js on the client side)
      * <p>
-     * Returns all result data of ComponentResults. The ComponentResults are specified by their IDs
-     * in the request's body. Returns the result data as text, each line a result data.
+     * Returns all result data of ComponentResults. The ComponentResults are specified by their IDs in the request's
+     * body. Returns the result data as text, each line a result data.
      */
     @Transactional
     @Authenticated
-    public Result exportDataOfComponentResults() throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    public Result exportDataOfComponentResults(Http.Request request) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         List<Long> componentResultIdList = new ArrayList<>();
-        request().body().asJson().get("resultIds").forEach(node -> componentResultIdList.add(node.asLong()));
-        String resultData = "";
+        request.body().asJson().get("resultIds").forEach(node -> componentResultIdList.add(node.asLong()));
+        String resultData;
         try {
             resultData = resultDataExportService.fromComponentResultIdList(componentResultIdList, loggedInUser);
         } catch (ForbiddenException | BadRequestException | NotFoundException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
         return ok(resultData);
     }
@@ -318,27 +322,27 @@ public class ImportExport extends Controller {
     /**
      * Ajax request (uses download.js on the client side)
      * <p>
-     * Returns all result data of ComponentResults belonging to the given component and study.
-     * Returns the result data as text, each line a result data.
+     * Returns all result data of ComponentResults belonging to the given component and study. Returns the result data
+     * as text, each line a result data.
      */
     @Transactional
     @Authenticated
-    public Result exportDataOfAllComponentResults(Long studyId, Long componentId) throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    public Result exportDataOfAllComponentResults(Http.Request request, Long studyId, Long componentId) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Study study = studyDao.findById(studyId);
         Component component = componentDao.findById(componentId);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStandardForComponents(studyId, componentId, component);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
 
-        String resultData = "";
+        String resultData;
         try {
             resultData = resultDataExportService.forComponent(loggedInUser, component);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
 
         return ok(resultData);
@@ -347,25 +351,25 @@ public class ImportExport extends Controller {
     /**
      * Ajax request (uses download.js on the client side)
      * <p>
-     * Returns all result data of ComponentResults belonging to the given worker's StudyResults.
-     * Returns the result data as text, each line a result data.
+     * Returns all result data of ComponentResults belonging to the given worker's StudyResults. Returns the result data
+     * as text, each line a result data.
      */
     @Transactional
     @Authenticated
-    public Result exportAllResultDataOfWorker(Long workerId) throws JatosGuiException {
+    public Result exportAllResultDataOfWorker(Http.Request request, Long workerId) {
         Worker worker = workerDao.findById(workerId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         try {
             checker.checkWorker(worker, workerId);
         } catch (BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
 
-        String resultData = "";
+        String resultData;
         try {
             resultData = resultDataExportService.forWorker(loggedInUser, worker);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
         return ok(resultData);
     }

@@ -3,11 +3,10 @@ package general;
 import com.google.inject.Injector;
 import daos.common.StudyDao;
 import daos.common.UserDao;
-import exceptions.gui.ForbiddenException;
+import exceptions.gui.common.ForbiddenException;
 import exceptions.gui.JatosGuiException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.NotFoundException;
 import general.common.Common;
-import general.common.RequestScope;
 import models.common.Study;
 import models.common.User;
 import org.apache.commons.io.FileUtils;
@@ -17,6 +16,7 @@ import play.Application;
 import play.Logger;
 import play.api.mvc.RequestHeader;
 import play.db.jpa.JPAApi;
+import play.libs.typedmap.TypedKey;
 import play.mvc.Http;
 import play.mvc.Http.Cookie;
 import play.mvc.Http.Cookies;
@@ -83,8 +83,7 @@ public class TestHelper {
     public void removeStudyAssetsRootDir() throws IOException {
         File assetsRoot = new File(Common.getStudyAssetsRootPath());
         if (Objects.requireNonNull(assetsRoot.list()).length > 0) {
-            Logger.warn(TestHelper.class.getSimpleName()
-                    + ".removeStudyAssetsRootDir: Study assets root directory "
+            Logger.warn(TestHelper.class.getSimpleName() + ".removeStudyAssetsRootDir: Study assets root directory "
                     + Common.getStudyAssetsRootPath()
                     + " is not empty after finishing testing. This should not happen.");
         }
@@ -103,11 +102,9 @@ public class TestHelper {
     }
 
     /**
-     * Creates and persist user if an user with this email doesn't exist
-     * already.
+     * Creates and persist user if an user with this email doesn't exist already.
      */
-    public User createAndPersistUser(String email, String name,
-            String password) {
+    public User createAndPersistUser(String email, String name, String password) {
         return jpaApi.withTransaction(entityManager -> {
             User user = userDao.findByEmail(email);
             if (user == null) {
@@ -149,14 +146,11 @@ public class TestHelper {
 
     public Study importExampleStudy(Injector injector) throws IOException {
         File studyZip = new File(BASIC_EXAMPLE_STUDY_ZIP);
-        File tempUnzippedStudyDir = Files.createTempDirectory(
-                "JatosImport_" + UUID.randomUUID().toString()).toFile();
+        File tempUnzippedStudyDir = Files.createTempDirectory("JatosImport_" + UUID.randomUUID().toString()).toFile();
         ZipUtil.unzip(studyZip, tempUnzippedStudyDir);
-        File[] studyFileList = ioUtils.findFiles(tempUnzippedStudyDir, "",
-                IOUtils.STUDY_FILE_SUFFIX);
+        File[] studyFileList = ioUtils.findFiles(tempUnzippedStudyDir, "", IOUtils.STUDY_FILE_SUFFIX);
         File studyFile = studyFileList[0];
-        UploadUnmarshaller<Study> uploadUnmarshaller = injector
-                .getInstance(StudyUploadUnmarshaller.class);
+        UploadUnmarshaller<Study> uploadUnmarshaller = injector.getInstance(StudyUploadUnmarshaller.class);
         Study importedStudy = uploadUnmarshaller.unmarshalling(studyFile);
         studyFile.delete();
 
@@ -194,22 +188,18 @@ public class TestHelper {
     }
 
     /**
-     * Our custom ErrorHandler isn't used in test cases:
-     * https://github.com/playframework/playframework/issues/2484
+     * Our custom ErrorHandler isn't used in test cases: https://github.com/playframework/playframework/issues/2484
      * <p>
-     * So this method can be used to catch the RuntimeException and check
-     * manually that the correct JatosGuiException was thrown.
+     * So this method can be used to catch the RuntimeException and check manually that the correct JatosGuiException
+     * was thrown.
      */
-    public void assertJatosGuiException(RequestBuilder request,
-            int httpStatus, String errorMsg) {
+    public void assertJatosGuiException(RequestBuilder request, int httpStatus, String errorMsg) {
         try {
             route(fakeApplication, request);
         } catch (RuntimeException e) {
             assertThat(e.getCause()).isInstanceOf(JatosGuiException.class);
-            JatosGuiException jatosGuiException = (JatosGuiException) e
-                    .getCause();
-            assertThat(jatosGuiException.getSimpleResult().status())
-                    .isEqualTo(httpStatus);
+            JatosGuiException jatosGuiException = (JatosGuiException) e.getCause();
+            assertThat(jatosGuiException.getSimpleResult().status()).isEqualTo(httpStatus);
             assertThat(jatosGuiException.getMessage()).contains(errorMsg);
         }
     }
@@ -218,8 +208,7 @@ public class TestHelper {
     public <T> T fetchTheLazyOnes(T obj) {
         Hibernate.initialize(obj);
         if (obj instanceof HibernateProxy) {
-            obj = (T) ((HibernateProxy) obj).getHibernateLazyInitializer()
-                    .getImplementation();
+            obj = (T) ((HibernateProxy) obj).getHibernateLazyInitializer().getImplementation();
         }
         return obj;
     }
@@ -233,8 +222,7 @@ public class TestHelper {
     }
 
     /**
-     * Mocks Play's Http.Context with one cookie that can be retrieved by
-     * cookies.get(name)
+     * Mocks Play's Http.Context with one cookie that can be retrieved by cookies.get(name)
      */
     public void mockContext(Cookie cookie) {
         Cookies cookies = mock(Cookies.class);
@@ -243,8 +231,7 @@ public class TestHelper {
     }
 
     /**
-     * Mocks Play's Http.Context with cookies. The cookies can be retrieved by
-     * cookieList.iterator()
+     * Mocks Play's Http.Context with cookies. The cookies can be retrieved by cookieList.iterator()
      */
     public void mockContext(List<Cookie> cookieList) {
         Cookies cookies = mock(Cookies.class);
@@ -275,14 +262,13 @@ public class TestHelper {
 
     public Http.Session mockSessionCookieandCache(User user) {
         Http.Session session = new Http.Session(new HashMap<>());
-        authenticationService.writeSessionCookieAndUserSessionCache(session,
-                user.getEmail(), WWW_EXAMPLE_COM);
+        authenticationService.writeSessionCookieAndUserSessionCache(session, user.getEmail(), WWW_EXAMPLE_COM);
         return session;
     }
 
-    public void defineLoggedInUser(User user) {
+    public void defineLoggedInUser(Http.Request request, User user) {
         mockContext();
-        RequestScope.put(AuthenticationService.LOGGED_IN_USER, user);
+        request.addAttr(TypedKey.create(AuthenticationService.LOGGED_IN_USER), user);
     }
 
 }

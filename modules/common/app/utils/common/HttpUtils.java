@@ -1,5 +1,8 @@
 package utils.common;
 
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.ForbiddenException;
+import exceptions.gui.common.NotFoundException;
 import play.Logger;
 import play.Logger.ALogger;
 import play.api.mvc.RequestHeader;
@@ -106,6 +109,13 @@ public class HttpUtils {
             value = value.trim();
         }
         return value;
+    }
+
+    public static int getHttpStatus(Exception e) {
+        if (e instanceof ForbiddenException) return Http.Status.FORBIDDEN;
+        if (e instanceof BadRequestException) return Http.Status.BAD_REQUEST;
+        if (e instanceof NotFoundException) return Http.Status.NOT_FOUND;
+        return Http.Status.INTERNAL_SERVER_ERROR;
     }
 
 }

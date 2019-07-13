@@ -2,9 +2,11 @@ package controllers.gui;
 
 import controllers.gui.actionannotations.AuthenticationAction.Authenticated;
 import controllers.gui.actionannotations.GuiAccessLoggingAction.GuiAccessLogging;
-import exceptions.gui.ForbiddenException;
+import controllers.gui.actionannotations.RefreshSessionCookieAction;
+import controllers.gui.actionannotations.RefreshSessionCookieAction.RefreshSessionCookie;
+import exceptions.gui.common.ForbiddenException;
 import exceptions.gui.JatosGuiException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.NotFoundException;
 import general.common.MessagesStrings;
 import models.common.User;
 import models.common.User.Role;
@@ -39,8 +41,6 @@ import java.util.List;
 @Singleton
 public class Users extends Controller {
 
-    private static final ALogger LOGGER = Logger.of(Users.class);
-
     private final JatosGuiExceptionThrower jatosGuiExceptionThrower;
     private final UserService userService;
     private final AuthenticationService authenticationService;
@@ -64,10 +64,12 @@ public class Users extends Controller {
 
     @Transactional
     @Authenticated(Role.ADMIN)
+    @RefreshSessionCookie
     public Result userManager(Request request) {
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         String breadcrumbs = breadcrumbsService.generateForHome(BreadcrumbsService.USER_MANAGER);
-        return ok(views.html.gui.user.userManager.render(loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
+        return ok(views.html.gui.user.userManager
+                .render(request, loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
     }
 
     /**
@@ -87,10 +89,10 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated(Role.ADMIN)
-    public Result toggleAdmin(String emailOfUserToChange, Boolean adminRole) {
+    public Result toggleAdmin(Request request, String emailOfUserToChange, Boolean adminRole) {
         boolean hasAdminRole;
         try {
-            hasAdminRole = userService.changeAdminRole(emailOfUserToChange, adminRole);
+            hasAdminRole = userService.changeAdminRole(request, emailOfUserToChange, adminRole);
         } catch (NotFoundException e) {
             return badRequest(e.getMessage());
         } catch (ForbiddenException e) {
@@ -104,12 +106,14 @@ public class Users extends Controller {
      */
     @Transactional
     @Authenticated
+    @RefreshSessionCookie
     public Result profile(Request request, String email) throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         checkEmailIsOfLoggedInUser(request, email, loggedInUser);
 
         String breadcrumbs = breadcrumbsService.generateForUser(loggedInUser);
-        return ok(views.html.gui.user.profile.render(loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
+        return ok(
+                views.html.gui.user.profile.render(request, loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
     }
 
     /**
@@ -118,18 +122,18 @@ public class Users extends Controller {
     @Transactional
     @Authenticated
     public Result singleUserData(Request request, String email) throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         checkEmailIsOfLoggedInUser(request, email, loggedInUser);
         return ok(jsonUtils.userData(loggedInUser));
     }
 
     /**
-     * Handles POST request of user create form. Only users with Role ADMIN are allowed to create new users.
+     * Ajax: Handles POST request of user create form. Only users with Role ADMIN are allowed to create new users.
      */
     @Transactional
     @Authenticated(Role.ADMIN)
     public Result submitCreated(Request request) {
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Form<NewUserModel> form = formFactory.form(NewUserModel.class).bindFromRequest(request);
 
         // Validate via AuthenticationService
@@ -145,13 +149,13 @@ public class Users extends Controller {
     }
 
     /**
-     * Handles POST request of user edit profile form (so far it's only the user's name - password is handled in another
+     * Ajax: Handles POST request of user edit profile form (so far it's only the user's name - password is handled in another
      * method).
      */
     @Transactional
     @Authenticated
     public Result submitEditedProfile(Request request, String email) throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         checkEmailIsOfLoggedInUser(request, email, loggedInUser);
 
         Form<ChangeUserProfileModel> form = formFactory.form(ChangeUserProfileModel.class).bindFromRequest(request);
@@ -166,7 +170,7 @@ public class Users extends Controller {
     }
 
     /**
-     * Handles POST request of change password form. Can be either origin in the user manager or in the user profile.
+     * Ajax: Handles POST request of change password form. Can be either origin in the user manager or in the user profile.
      */
     @Transactional
     @Authenticated
@@ -175,8 +179,8 @@ public class Users extends Controller {
 
         // Validate via AuthenticationValidation
         ChangePasswordModel changePasswordModel = form.get();
-        List<ValidationError> errorList = authenticationValidation
-                .validateChangePassword(emailOfUserToChange, changePasswordModel);
+        List<ValidationError> errorList = authenticationValidation.validateChangePassword(request, emailOfUserToChange,
+                changePasswordModel);
         if (!errorList.isEmpty()) {
             errorList.forEach(form::withError);
             return forbidden(form.errorsAsJson());
@@ -193,14 +197,14 @@ public class Users extends Controller {
     }
 
     /**
-     * POST request to delete a user. Is called from user manager and user profile.
+     * Ajax POST request to delete a user. Is called from user manager and user profile.
      * <p>
      * It can't be a HTTP DELETE because it contains form data and Play doesn't handle body data in a DELETE request.
      */
     @Transactional
     @Authenticated
     public Result remove(Request request, String emailOfUserToRemove) {
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         String loggedInUserEmail = loggedInUser.getEmail();
         if (!loggedInUser.hasRole(Role.ADMIN) && !emailOfUserToRemove.equals(loggedInUserEmail)) {
             return forbidden(MessagesStrings.NOT_ALLOWED_TO_DELETE_USER);
@@ -223,8 +227,8 @@ public class Users extends Controller {
         }
         // If the user removes himself: logout
         if (emailOfUserToRemove.equals(loggedInUserEmail)) {
-            authenticationService
-                    .clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(), request.host());
+            authenticationService.clearUserSessionCache(loggedInUser.getEmail(), request.host());
+            return ok(" ").withNewSession();
         }
         return ok(" "); // jQuery.ajax cannot handle empty responses
     }
@@ -232,7 +236,8 @@ public class Users extends Controller {
     private void checkEmailIsOfLoggedInUser(Request request, String email, User loggedInUser) throws JatosGuiException {
         if (!email.toLowerCase().equals(loggedInUser.getEmail())) {
             ForbiddenException e = new ForbiddenException(MessagesStrings.userNotAllowedToGetData(email));
-            jatosGuiExceptionThrower.throwRedirect(e, controllers.gui.routes.Home.home(), HttpUtils.isAjax(request));
+            jatosGuiExceptionThrower.throwRedirect(request, e, controllers.gui.routes.Home.home(),
+                    HttpUtils.isAjax(request));
         }
     }
 

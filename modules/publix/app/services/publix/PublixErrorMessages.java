@@ -9,8 +9,7 @@ import models.common.workers.Worker;
  */
 public class PublixErrorMessages {
 
-    public static final String ABANDONED_STUDY_BY_COOKIE = "Closed by JATOS: Too many unfinished studies open in the "
-            + "same browser.";
+	public static final String ABANDONED_STUDY_BY_COOKIE = "Closed by JATOS: Too many unfinished studies open in the same browser.";
     public static final String NO_WORKERID_IN_SESSION = "No worker ID in session. Was the study started?";
     public static final String COMPONENTS_POSITION_NOT_NULL = "Component's positions can't be null.";
     public static final String UNKNOWN_WORKER_TYPE = "Unknown worker type";
@@ -18,10 +17,8 @@ public class PublixErrorMessages {
     public static final String SUBMITTED_DATA_UNKNOWN_FORMAT = "Submitted data have an unknown format.";
     public static final String NO_WORKER_IN_QUERY_STRING = "Missing worker ID in query string";
     public static final String GROUP_STUDY_NOT_POSSIBLE_TWICE = "It's not possible to run a group study twice.";
-    public static final String IDCOOKIE_COLLECTION_FULL = "Can't generate a new ID cookie due to max number is "
-            + "reached. This should never happen.";
-    public static final String IDCOOKIE_COLLECTION_INDEX_OUT_OF_BOUND = "Max number of ID cookies is reached but a "
-            + "new index was requested.";
+	public static final String IDCOOKIE_COLLECTION_FULL = "Can't generate a new ID cookie due to max number is reached. This should never happen.";
+	public static final String IDCOOKIE_COLLECTION_INDEX_OUT_OF_BOUND = "Max number of ID cookies is reached but a new index was requested.";
     public static final String STUDY_RESULT_DOESN_T_BELONG_TO_THIS_STUDY = "Study result doesn't belong to this study.";
     public static final String STUDY_RESULT_DOESN_T_EXIST = "Study result doesn't exist.";
 
@@ -68,7 +65,7 @@ public class PublixErrorMessages {
 
     public static String componentNotAllowedToReload(Long studyId, Long componentId) {
         return "It's not allowed to reload this component (ID: " + componentId
-                + "). Unfortunately it is neccessary to finish " + "this study (ID: " + studyId + ") at this point.";
+                + "). Unfortunately it is neccessary to finish this study (ID: " + studyId + ") at this point.";
     }
 
     public static String studyHasNoActiveComponents(Long studyId) {
@@ -132,7 +129,7 @@ public class PublixErrorMessages {
     public static String idCookieForThisStudyResultNotExists(Long studyResultId) {
         return "JATOS isn't allowed to run a study with the study result ID " + studyResultId
                 + ". Maybe it was closed automatically by "
-                + "JATOS because you started other studies in the same browser " + "in the meantime.";
+                + "JATOS because you started other studies in the same browser in the meantime.";
     }
 
     public static String idCookieExistsAlready(Long studyResultId) {

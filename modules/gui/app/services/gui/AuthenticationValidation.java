@@ -11,6 +11,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Whitelist;
 import play.data.validation.ValidationError;
+import play.mvc.Http;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -137,10 +138,10 @@ public class AuthenticationValidation {
      * in the ChangePasswordModel class, but since here the user DAO is needed I
      * put it in an extra class.
      */
-    public List<ValidationError> validateChangePassword(String emailOfUserToChange,
+    public List<ValidationError> validateChangePassword(Http.Request request, String emailOfUserToChange,
             ChangePasswordModel changePasswordModel) {
         emailOfUserToChange = emailOfUserToChange.toLowerCase();
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
 
         // All form related errors go into errorList
         List<ValidationError> errorList = new ArrayList<>();

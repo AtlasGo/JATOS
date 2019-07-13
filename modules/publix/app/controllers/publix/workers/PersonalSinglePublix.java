@@ -19,6 +19,7 @@ import play.db.jpa.JPAApi;
 import play.mvc.Http;
 import play.mvc.Result;
 import services.publix.ResultCreator;
+import services.publix.idcookie.IdCookieAccessor;
 import services.publix.idcookie.IdCookieService;
 import services.publix.workers.PersonalSingleErrorMessages;
 import services.publix.workers.PersonalSinglePublixUtils;
@@ -63,26 +64,19 @@ public class PersonalSinglePublix extends Publix<PersonalSingleWorker> implement
     }
 
     /**
-     * {@inheritDoc}<br>
-     * <br>
-     * <p>
-     * Only a general single run or a personal single run has the special
-     * StudyState PRE. Only with the corresponding workers (GeneralSingleWorker
-     * and PersonalSingleWorker) it's possible to have a preview of the study.
-     * To get into the preview mode one has to add 'pre' to the URL query
-     * string. In the preview mode a worker can start the study (with 'pre') and
-     * start the first active component as often as he wants. The study result switches
-     * into 'STARTED' and back to normal behavior by starting the study without
-     * the 'pre' in the query string or by going on and start a component
-     * different then the first.
+     * {@inheritDoc} Only a general single run or a personal single run has the special StudyState PRE. Only with the
+     * corresponding workers (GeneralSingleWorker and PersonalSingleWorker) it's possible to have a preview of the
+     * study. To get into the preview mode one has to add 'pre' to the URL query string. In the preview mode a worker
+     * can start the study (with 'pre') and start the first active component as often as he wants. The study result
+     * switches into 'STARTED' and back to normal behavior by starting the study without the 'pre' in the query string
+     * or by going on and start a component different then the first.
      */
     @Override
     public Result startStudy(Http.Request request, Long studyId, Long batchId) throws PublixException {
         String workerIdStr = HttpUtils.getQueryString(request, PERSONAL_SINGLE_WORKER_ID);
         boolean pre = HttpUtils.getQueryString(request, "pre") != null;
-        LOGGER.info(
-                ".startStudy: studyId " + studyId + ", " + "batchId " + batchId + ", " + PERSONAL_SINGLE_WORKER_ID + " "
-                        + workerIdStr + ", " + "pre " + pre);
+        LOGGER.info(".startStudy: studyId " + studyId + ", " + "batchId " + batchId + ", " + PERSONAL_SINGLE_WORKER_ID
+                + " " + workerIdStr + ", " + "pre " + pre);
         Study study = publixUtils.retrieveStudy(studyId);
         Batch batch = publixUtils.retrieveBatchByIdOrDefault(batchId, study);
         PersonalSingleWorker worker = publixUtils.retrieveTypedWorker(workerIdStr);
@@ -96,14 +90,14 @@ public class PersonalSinglePublix extends Publix<PersonalSingleWorker> implement
         // 5. No preview study, second+ call -> throw exception
         Optional<StudyResult> studyResult = worker.getLastStudyResult();
         if (!studyResult.isPresent()) {
-            publixUtils.finishOldestStudyResult();
+            request = publixUtils.finishOldestStudyResult(request);
             studyResult = Optional.of(resultCreator.createStudyResult(study, batch, worker, pre));
         } else {
-            if (!idCookieService.hasIdCookie(studyResult.get().getId())) {
-                publixUtils.finishOldestStudyResult();
+            if (!request.attrs().get(IdCookieAccessor.ID_COOKIES).contains(studyResult.get().getId())) {
+                request = publixUtils.finishOldestStudyResult(request);
             }
         }
-        idCookieService.writeIdCookie(worker, batch, studyResult.get());
+        idCookieService.writeIdCookie(request, worker, batch, studyResult.get());
         publixUtils.setUrlQueryParameter(request.queryString(), studyResult.get());
 
         Component component = publixUtils.retrieveFirstActiveComponent(study);

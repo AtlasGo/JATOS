@@ -6,7 +6,7 @@ import com.google.inject.Injector;
 import daos.common.ComponentDao;
 import daos.common.StudyDao;
 import daos.common.UserDao;
-import exceptions.gui.ForbiddenException;
+import exceptions.gui.common.ForbiddenException;
 import general.TestHelper;
 import models.common.Component;
 import models.common.Study;
@@ -533,7 +533,7 @@ public class ImportExportServiceTest {
         assertThat(jsonNode.get("uploadedDirExists").asBoolean()).isTrue();
 
         // importStudy() should remember the study file name in the Play session
-        String studyFileName = request.session().getOptional(ImportExportService.SESSION_UNZIPPED_STUDY_DIR).get();
+        String studyFileName = request.session().getOptional(ImportExportService.TEMP_STUDY_DIR).get();
         assertThat(studyFileName).startsWith("JatosImport_");
     }
 

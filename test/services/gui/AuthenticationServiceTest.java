@@ -198,14 +198,14 @@ public class AuthenticationServiceTest {
     }
 
     /**
-     * Test AuthenticationService.refreshSessionCookie(): writes a new last activity time into the session cookie
+     * Test AuthenticationService.refreshLastActivityTimeInSessionCookie(): writes a new last activity time into the session cookie
      */
     @Test
     public void checkRefreshSessionCookie() {
         Map<String, String> data = new HashMap<>();
         data.put(AuthenticationService.SESSION_LAST_ACTIVITY_TIME, "blafasel");
         Http.Session session = new Http.Session(data);
-        authenticationService.refreshSessionCookie(session);
+        authenticationService.refreshLastActivityTimeInSessionCookie(session);
 
         assertThat(session.get(AuthenticationService.SESSION_LAST_ACTIVITY_TIME)).isNotEqualTo("blafasel");
     }
@@ -231,7 +231,7 @@ public class AuthenticationServiceTest {
     }
 
     /**
-     * Test AuthenticationService.clearSessionCookieAndUserSessionCache(): additional to removing all entries from the
+     * Test AuthenticationService.clearUserSessionCache(): additional to removing all entries from the
      * session it also removes the session ID from the cached user session
      */
     @Test
@@ -244,7 +244,7 @@ public class AuthenticationServiceTest {
         data.put(AuthenticationService.SESSION_USER_EMAIL, "blafasel");
         Http.Session session = new Http.Session(data);
         jpaApi.withTransaction(() -> authenticationService
-                .clearSessionCookieAndUserSessionCache(session, userBla.getEmail(), TestHelper.WWW_EXAMPLE_COM));
+                .clearUserSessionCache(session, userBla.getEmail(), TestHelper.WWW_EXAMPLE_COM));
 
         // Check that session is cleared
         assertThat(session.get(AuthenticationService.SESSION_LAST_ACTIVITY_TIME)).isNull();
@@ -274,7 +274,7 @@ public class AuthenticationServiceTest {
         assertThat(authenticationService.isValidSessionId(session, "foo@bar.com", "1.2.3.4")).isTrue();
 
         // Clean-up
-        authenticationService.clearSessionCookieAndUserSessionCache(session, "foo@bar.com", "1.2.3.4");
+        authenticationService.clearUserSessionCache(session, "foo@bar.com", "1.2.3.4");
     }
 
     @Test
@@ -297,8 +297,8 @@ public class AuthenticationServiceTest {
         assertThat(authenticationService.isValidSessionId(sessionCookie3, "foo@foo.org", "0.0.0.0")).isFalse();
 
         // Clean-up
-        authenticationService.clearSessionCookieAndUserSessionCache(sessionCookie1, "foo@foo.org", "1.2.3.4");
-        authenticationService.clearSessionCookieAndUserSessionCache(sessionCookie2, "foo@foo.org", "9.8.7.6");
+        authenticationService.clearUserSessionCache(sessionCookie1, "foo@foo.org", "1.2.3.4");
+        authenticationService.clearUserSessionCache(sessionCookie2, "foo@foo.org", "9.8.7.6");
     }
 
     /**
@@ -316,7 +316,7 @@ public class AuthenticationServiceTest {
         assertThat(authenticationService.isValidSessionId(session, "FOO@BAR.COM", "1.2.3.4")).isFalse();
 
         // Clean-up
-        authenticationService.clearSessionCookieAndUserSessionCache(session, "foo@bar.com", "1.2.3.4");
+        authenticationService.clearUserSessionCache(session, "foo@bar.com", "1.2.3.4");
     }
 
     /**
@@ -331,7 +331,7 @@ public class AuthenticationServiceTest {
         assertThat(authenticationService.isValidSessionId(session, "foo@bar.com", "1.2.3.4")).isFalse();
 
         // Clean-up
-        authenticationService.clearSessionCookieAndUserSessionCache(session, "foo@bar.com", "1.2.3.4");
+        authenticationService.clearUserSessionCache(session, "foo@bar.com", "1.2.3.4");
     }
 
     /**
@@ -346,7 +346,7 @@ public class AuthenticationServiceTest {
         assertThat(authenticationService.isValidSessionId(session, "foo@bar.com", "1.2.3.4")).isFalse();
 
         // Clean-up
-        authenticationService.clearSessionCookieAndUserSessionCache(session, "foo@bar.com", "1.2.3.4");
+        authenticationService.clearUserSessionCache(session, "foo@bar.com", "1.2.3.4");
     }
 
     /**

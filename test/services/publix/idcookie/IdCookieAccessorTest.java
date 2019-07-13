@@ -55,8 +55,8 @@ public class IdCookieAccessorTest {
 
         IdCookieCollection idCookieCollection = idCookieAccessor.extract();
         assertThat(idCookieCollection.size()).isEqualTo(2);
-        assertThat(idCookieCollection.findWithStudyResultId(1l)).isEqualTo(idCookie1);
-        assertThat(idCookieCollection.findWithStudyResultId(2l)).isEqualTo(idCookie2);
+        assertThat(idCookieCollection.get(1l)).isEqualTo(idCookie1);
+        assertThat(idCookieCollection.get(2l)).isEqualTo(idCookie2);
     }
 
     @Test
@@ -79,7 +79,7 @@ public class IdCookieAccessorTest {
 
         IdCookieCollection idCookieCollection = idCookieAccessor.extract();
         assertThat(idCookieCollection.size()).isEqualTo(1);
-        IdCookieModel idCookie1Extracted = idCookieCollection.findWithStudyResultId(1l);
+        IdCookieModel idCookie1Extracted = idCookieCollection.get(1l);
         idCookieTestHelper.checkDummyIdCookie(idCookie1Extracted);
         assertThat(RequestScope.has(IdCookieCollection.class.getSimpleName())).isTrue();
     }
@@ -180,7 +180,7 @@ public class IdCookieAccessorTest {
         idCookieCollection = idCookieAccessor.extract();
         assertThat(idCookieCollection.size()).isEqualTo(1);
         IdCookieModel idCookie1Extracted = idCookieCollection
-                .findWithStudyResultId(1l);
+                .get(1l);
         idCookieTestHelper.checkDummyIdCookie(idCookie1Extracted);
         assertThat(RequestScope.has(IdCookieCollection.class.getSimpleName()))
                 .isTrue();

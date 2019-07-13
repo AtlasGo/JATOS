@@ -8,14 +8,12 @@ import general.common.StudyLogger;
 import group.GroupAdministration;
 import models.common.workers.MTWorker;
 import models.common.workers.Worker;
-import play.mvc.Http;
 import services.publix.PublixUtils;
 import services.publix.ResultCreator;
 import services.publix.idcookie.IdCookieService;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -45,8 +43,6 @@ public class MTPublixUtils extends PublixUtils<MTWorker> {
 
     @Override
     public Map<String, String[]> getNonJatosUrlQueryParameters(Map<String, String[]> queryParameters) {
-        // Allow MTurk's worker ID: https://github.com/JATOS/JATOS/issues/40
-        // queryParameters.remove(MTPublix.MT_WORKER_ID);
         queryParameters.remove(MTPublix.ASSIGNMENT_ID);
         queryParameters.remove("hitId");
         queryParameters.remove("turkSubmitTo");

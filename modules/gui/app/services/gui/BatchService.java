@@ -35,8 +35,8 @@ public class BatchService {
     private final StudyLogger studyLogger;
 
     @Inject
-    BatchService(ResultRemover resultRemover, BatchDao batchDao, StudyDao studyDao,
-            WorkerDao workerDao, GroupResultDao groupResultDao, StudyLogger studyLogger) {
+    BatchService(ResultRemover resultRemover, BatchDao batchDao, StudyDao studyDao, WorkerDao workerDao,
+            GroupResultDao groupResultDao, StudyLogger studyLogger) {
         this.resultRemover = resultRemover;
         this.batchDao = batchDao;
         this.studyDao = studyDao;
@@ -46,8 +46,7 @@ public class BatchService {
     }
 
     /**
-     * Clones a Batch but does not persists. Doesn't copy batch session data and
-     * version.
+     * Clones a Batch but does not persists. Doesn't copy batch session data and version.
      */
     public Batch clone(Batch batch) {
         Batch clone = new Batch();
@@ -74,8 +73,7 @@ public class BatchService {
     }
 
     /**
-     * Create and initialises default Batch. Each Study has a default batch.
-     * Does NOT persist.
+     * Create and initialises default Batch. Each Study has a default batch. Does NOT persist.
      */
     public Batch createDefaultBatch(Study study) {
         Batch batch = new Batch();
@@ -87,8 +85,7 @@ public class BatchService {
     }
 
     /**
-     * Creates batch, initialises it and persists it. Updates study with new
-     * batch.
+     * Creates batch, initialises it and persists it. Updates study with new batch.
      */
     public void createAndPersistBatch(Batch batch, Study study) {
         initBatch(batch, study);
@@ -102,8 +99,7 @@ public class BatchService {
     }
 
     /**
-     * Add default allowed worker types and all study's Jatos worker. Generates
-     * UUID.
+     * Add default allowed worker types and all study's Jatos worker. Generates UUID.
      */
     private void initBatch(Batch batch, Study study) {
         if (batch.getUuid() == null) {
@@ -126,8 +122,7 @@ public class BatchService {
         batch.setMaxTotalMembers(updatedBatchProps.getMaxTotalMembers());
         batch.setMaxTotalWorkers(updatedBatchProps.getMaxTotalWorkers());
         batch.getAllowedWorkerTypes().clear();
-        updatedBatchProps.getAllowedWorkerTypes()
-                .forEach(batch::addAllowedWorkerType);
+        updatedBatchProps.getAllowedWorkerTypes().forEach(batch::addAllowedWorkerType);
         batch.setComments(updatedBatchProps.getComments());
         batch.setJsonData(updatedBatchProps.getJsonData());
         batchDao.update(batch);
@@ -184,13 +179,11 @@ public class BatchService {
 
     public boolean updateBatchSession(long batchId, BatchSession batchSession) {
         Batch currentBatch = batchDao.findById(batchId);
-        if (currentBatch == null ||
-                !batchSession.getVersion().equals(currentBatch.getBatchSessionVersion())) {
+        if (currentBatch == null || !batchSession.getVersion().equals(currentBatch.getBatchSessionVersion())) {
             return false;
         }
 
-        currentBatch.setBatchSessionVersion(
-                currentBatch.getBatchSessionVersion() + 1);
+        currentBatch.setBatchSessionVersion(currentBatch.getBatchSessionVersion() + 1);
         if (Strings.isNullOrEmpty(batchSession.getData())) {
             currentBatch.setBatchSessionData("{}");
         } else {
@@ -201,9 +194,8 @@ public class BatchService {
     }
 
     /**
-     * Removes batch, all it's StudyResults, ComponentResults, GroupResults and
-     * Workers (if they don't belong to an other batch) and persists the changes
-     * to the database.
+     * Removes batch, all it's StudyResults, ComponentResults, GroupResults and Workers (if they don't belong to an
+     * other batch) and persists the changes to the database.
      */
     public void remove(Batch batch) {
         // Remove this Batch from its study

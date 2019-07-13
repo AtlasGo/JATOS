@@ -29,13 +29,13 @@ public class IdCookieCollection {
      * Internally we use a map to store the cookies: Each IdCookie has a unique
      * study result ID. We map the study result ID to the actually cookie.
      */
-    private final HashMap<Long, IdCookieModel> idCookieMap = new HashMap<>();
+    public final HashMap<Long, IdCookieModel> idCookieMap = new HashMap<>();
 
-    protected boolean isFull() {
+    public boolean isFull() {
         return size() >= MAX_ID_COOKIES;
     }
 
-    protected int size() {
+    public int size() {
         return idCookieMap.size();
     }
 
@@ -45,7 +45,7 @@ public class IdCookieCollection {
      * number of cookies is reached an IdCookieCollectionFullException is
      * thrown.
      */
-    protected IdCookieModel add(IdCookieModel idCookie)
+    public IdCookieModel add(IdCookieModel idCookie)
             throws IdCookieAlreadyExistsException {
         if (idCookieMap.containsKey(idCookie.getStudyResultId())) {
             throw new IdCookieAlreadyExistsException(PublixErrorMessages
@@ -59,7 +59,7 @@ public class IdCookieCollection {
      * is already stored it gets overwritten. If the max number of cookies is
      * reached an IdCookieCollectionFullException is thrown.
      */
-    protected IdCookieModel put(IdCookieModel idCookie)
+    public IdCookieModel put(IdCookieModel idCookie)
             throws IdCookieCollectionFullException {
         if (isFull() && !idCookieMap.containsKey(idCookie.getStudyResultId())) {
             throw new IdCookieCollectionFullException(
@@ -68,11 +68,11 @@ public class IdCookieCollection {
         return idCookieMap.put(idCookie.getStudyResultId(), idCookie);
     }
 
-    protected IdCookieModel remove(IdCookieModel idCookie) {
+    public IdCookieModel remove(IdCookieModel idCookie) {
         return idCookieMap.remove(idCookie.getStudyResultId());
     }
 
-    protected Collection<IdCookieModel> getAll() {
+    public Collection<IdCookieModel> getAll() {
         return idCookieMap.values();
     }
 
@@ -83,7 +83,7 @@ public class IdCookieCollection {
      * this IdCookieCollection is full a IndexOutOfBoundsException will be
      * thrown.
      */
-    protected int getNextAvailableIdCookieIndex() {
+    public int getNextAvailableIdCookieIndex() {
         if (isFull()) {
             throw new IndexOutOfBoundsException(
                     PublixErrorMessages.IDCOOKIE_COLLECTION_INDEX_OUT_OF_BOUND);
@@ -103,8 +103,12 @@ public class IdCookieCollection {
      * Returns the IdCookie to which the specified study result ID is mapped, or
      * null if nothing maps to the ID.
      */
-    protected IdCookieModel findWithStudyResultId(long studyResultId) {
+    public IdCookieModel get(long studyResultId) {
         return idCookieMap.get(studyResultId);
+    }
+
+    public boolean contains(long studyResultId) {
+        return idCookieMap.containsKey(studyResultId);
     }
 
     @Override

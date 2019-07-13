@@ -1,7 +1,7 @@
 package services.gui;
 
-import exceptions.gui.BadRequestException;
-import exceptions.gui.ForbiddenException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.ForbiddenException;
 import general.common.MessagesStrings;
 import models.common.*;
 import models.common.workers.Worker;

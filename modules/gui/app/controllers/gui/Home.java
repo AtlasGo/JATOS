@@ -2,6 +2,7 @@ package controllers.gui;
 
 import controllers.gui.actionannotations.AuthenticationAction.Authenticated;
 import controllers.gui.actionannotations.GuiAccessLoggingAction.GuiAccessLogging;
+import controllers.gui.actionannotations.RefreshSessionCookieAction.RefreshSessionCookie;
 import daos.common.StudyDao;
 import general.common.JatosUpdater;
 import models.common.Study;
@@ -59,16 +60,18 @@ public class Home extends Controller {
      */
     @Transactional
     @Authenticated
+    @RefreshSessionCookie
     public Result home(Http.Request request, int httpStatus) {
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         List<Study> studyList = studyDao.findAllByUser(loggedInUser);
         String breadcrumbs = breadcrumbsService.generateForHome();
         return status(httpStatus,
-                views.html.gui.home.render(studyList, loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
+                views.html.gui.home.render(request, studyList, loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request)));
     }
 
     @Transactional
     @Authenticated
+    @RefreshSessionCookie
     public Result home(Http.Request request) {
         return home(request, Http.Status.OK);
     }
@@ -81,8 +84,8 @@ public class Home extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result sidebarStudyList() {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    public Result sidebarStudyList(Http.Request request) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         List<Study> studyList = studyDao.findAllByUser(loggedInUser);
         return ok(jsonUtils.sidebarStudyList(studyList));
     }
@@ -101,6 +104,8 @@ public class Home extends Controller {
     }
 
     /**
+     * Ajax
+     *
      * Checks whether there is an JATOS update available and if yes returns ReleaseInfo as JSON.
      *
      * @param allowPreReleases If true, allows requesting of pre-releases too
@@ -119,6 +124,8 @@ public class Home extends Controller {
     }
 
     /**
+     * Ajax
+     *
      * Downloads the latest JATOS release into the system's tmp directory without installing it.
      *
      * @param dry Allows testing the endpoint without actually downloading anything
@@ -137,6 +144,8 @@ public class Home extends Controller {
     }
 
     /**
+     * Ajax
+     *
      * Initializes the actual JATOS update and subsequent restart.
      *
      * @param backupAll If true, everything in the JATOS directory will be copied into a backup folder.

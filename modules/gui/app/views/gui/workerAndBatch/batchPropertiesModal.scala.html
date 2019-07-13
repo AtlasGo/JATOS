@@ -23,7 +23,7 @@
                     <div class="form-group row">
                         <label class="control-label col-xs-3" for="@models.gui.BatchProperties.TITLE">Title</label>
                         <div class="col-xs-9">
-                            <input type="text" class="form-control @models.gui.BatchProperties.TITLE" name="@models.gui.BatchProperties.TITLE" placeholder="Your batch title">
+                            <input type="text" id="@models.gui.BatchProperties.TITLE" class="form-control @models.gui.BatchProperties.TITLE" name="@models.gui.BatchProperties.TITLE" placeholder="Your batch title">
                         </div>
                     </div>
 
@@ -75,7 +75,7 @@
                         <div class="col-xs-3">
                             <div class="input-group">
                                 <span class="input-group-addon">
-                                    <input type="checkbox" class="@models.gui.BatchProperties.MAX_TOTAL_WORKER_LIMITED" name="@models.gui.BatchProperties.MAX_TOTAL_WORKER_LIMITED">
+                                    <input type="checkbox" id="@models.gui.BatchProperties.MAX_TOTAL_WORKER_LIMITED" class="@models.gui.BatchProperties.MAX_TOTAL_WORKER_LIMITED" name="@models.gui.BatchProperties.MAX_TOTAL_WORKER_LIMITED">
                                     <!-- We need a hidden input field.
                                     http://stackoverflow.com/questions/8204708/how-do-i-bind-a-checkbox-to-a-boolean-in-play-framework -->
                                     <input type="hidden" name="@models.gui.BatchProperties.MAX_TOTAL_WORKER_LIMITED" value="false" />
@@ -92,7 +92,7 @@
                         <div class="col-xs-9">
                             <div class="form-control @models.gui.BatchProperties.JSON_DATA" id="batchJsonData"></div>
                             <!-- We use a hidden textarea here to transfer the JSON data into the form POST -->
-                            <textarea class="@models.gui.BatchProperties.JSON_DATA" name="@models.gui.BatchProperties.JSON_DATA" hidden></textarea>
+                            <textarea id="@models.gui.BatchProperties.JSON_DATA" class="@models.gui.BatchProperties.JSON_DATA" name="@models.gui.BatchProperties.JSON_DATA" hidden></textarea>
                         </div>
                     </div>
 
@@ -104,7 +104,7 @@
                             <div class="col-xs-3">
                                 <div class="input-group">
                                     <span class="input-group-addon">
-                                        <input type="checkbox" class="@models.gui.BatchProperties.MAX_TOTAL_MEMBER_LIMITED" name="@models.gui.BatchProperties.MAX_TOTAL_MEMBER_LIMITED">
+                                        <input type="checkbox" id="@models.gui.BatchProperties.MAX_TOTAL_MEMBER_LIMITED" class="@models.gui.BatchProperties.MAX_TOTAL_MEMBER_LIMITED" name="@models.gui.BatchProperties.MAX_TOTAL_MEMBER_LIMITED">
                                         <!-- We need a hidden input field.
                                         http://stackoverflow.com/questions/8204708/how-do-i-bind-a-checkbox-to-a-boolean-in-play-framework -->
                                         <input type="hidden" name="@models.gui.BatchProperties.MAX_TOTAL_MEMBER_LIMITED" value="false" />
@@ -119,7 +119,7 @@
                             <div class="col-xs-3">
                                 <div class="input-group">
                                     <span class="input-group-addon">
-                                        <input type="checkbox" class="@models.gui.BatchProperties.MAX_ACTIVE_MEMBER_LIMITED" name="@models.gui.BatchProperties.MAX_ACTIVE_MEMBER_LIMITED">
+                                        <input type="checkbox" id="@models.gui.BatchProperties.MAX_ACTIVE_MEMBER_LIMITED" class="@models.gui.BatchProperties.MAX_ACTIVE_MEMBER_LIMITED" name="@models.gui.BatchProperties.MAX_ACTIVE_MEMBER_LIMITED">
                                         <!-- We need a hidden input field.
                                         http://stackoverflow.com/questions/8204708/how-do-i-bind-a-checkbox-to-a-boolean-in-play-framework -->
                                         <input type="hidden" name="@models.gui.BatchProperties.MAX_ACTIVE_MEMBER_LIMITED" value="false" />

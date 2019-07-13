@@ -10,8 +10,8 @@ import javax.inject.Singleton;
 
 import daos.common.ComponentResultDao;
 import daos.common.StudyResultDao;
-import exceptions.gui.BadRequestException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.NotFoundException;
 import general.common.MessagesStrings;
 import models.common.ComponentResult;
 import models.common.StudyResult;

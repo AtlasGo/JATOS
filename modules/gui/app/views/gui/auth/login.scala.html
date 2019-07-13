@@ -1,4 +1,4 @@
-@(form: Form[controllers.gui.Authentication.Login])
+@(request: Http.Request, form: Form[controllers.gui.Authentication.Login])
 
 <!DOCTYPE html>
 
@@ -72,14 +72,14 @@ function setBrand() {
 @for(error <- form.globalErrors) {
 	$('#password').after('<p class="text-danger">@error.message</p>');
 }
-@if(flash.containsKey(general.gui.FlashScopeMessaging.SUCCESS)) {
-	$('#password').after('<p class="text-success">@flash.get(general.gui.FlashScopeMessaging.SUCCESS)</p>');
+@if(request.flash().containsKey(general.gui.Messages.SUCCESS)) {
+	$('#password').after('<p class="text-success">@request.flash().get(general.gui.Messages.SUCCESS)</p>');
 }
-@if(flash.containsKey(general.gui.FlashScopeMessaging.WARNING)) {
-	$('#password').after('<p class="text-warning">@flash.get(general.gui.FlashScopeMessaging.WARNING)</p>');
+@if(request.flash().containsKey(general.gui.Messages.WARNING)) {
+	$('#password').after('<p class="text-warning">@request.flash().get(general.gui.Messages.WARNING)</p>');
 }
-@if(flash.containsKey(general.gui.FlashScopeMessaging.ERROR)) {
-	$('#password').after('<p class="text-danger">@flash.get(general.gui.FlashScopeMessaging.ERROR)</p>');
+@if(request.flash().containsKey(general.gui.Messages.ERROR)) {
+	$('#password').after('<p class="text-danger">@request.flash().get(general.gui.Messages.ERROR)</p>');
 }
 </script>
 

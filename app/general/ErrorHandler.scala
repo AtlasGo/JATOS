@@ -1,9 +1,8 @@
 package general
 
-import javax.inject.{Inject, Singleton}
-
 import exceptions.gui.JatosGuiException
 import exceptions.publix.{InternalServerErrorPublixException, PublixException}
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.http.HttpErrorHandler
 import play.api.mvc.Results._

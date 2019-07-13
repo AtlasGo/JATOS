@@ -130,11 +130,11 @@ public class IdCookieCollectionTest {
     @Test
     public void checkFindWithStudyResultId() throws IdCookieCollectionFullException {
         IdCookieCollection idCookieCollection = new IdCookieCollection();
-        assertThat(idCookieCollection.findWithStudyResultId(1l)).isNull();
+        assertThat(idCookieCollection.get(1l)).isNull();
 
         IdCookieModel idCookie = createIdCookie(1l, 0);
         idCookieCollection.put(idCookie);
-        assertThat(idCookieCollection.findWithStudyResultId(1l)).isEqualTo(idCookie);
+        assertThat(idCookieCollection.get(1l)).isEqualTo(idCookie);
     }
 
 }

@@ -55,9 +55,9 @@ abstract class BatchChannel[A <: Worker](components: ControllerComponents,
     * into WebSocket. In case of an error/problem an PublixException is thrown.
     */
   @throws(classOf[PublixException])
-  def open(studyId: Long, studyResultId: Long): Flow[Any, Nothing, _] = {
+  def open(request: RequestHeader, studyId: Long, studyResultId: Long): Flow[Any, Nothing, _] = {
     logger.info(s".open: studyId $studyId, studyResultId $studyResultId")
-    val idCookie = idCookieService.getIdCookie(studyResultId)
+    val idCookie = idCookieService.getIdCookie(request.asJava, studyResultId)
     val worker = publixUtils.retrieveTypedWorker(idCookie.getWorkerId)
     val study = publixUtils.retrieveStudy(studyId)
     val batch = publixUtils.retrieveBatch(idCookie.getBatchId)

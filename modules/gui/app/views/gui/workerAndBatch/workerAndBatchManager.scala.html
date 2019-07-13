@@ -1,7 +1,7 @@
-@(loggedInUser: common.User, breadcrumbs: String, localhost: Boolean, study: common.Study,
+@(request: Http.Request, loggedInUser: common.User, breadcrumbs: String, localhost: Boolean, study: common.Study,
     jatosUrl: java.net.URL, allWorkersSize: Integer)
 
-@views.html.gui.main(loggedInUser, breadcrumbs, localhost){
+@views.html.gui.main(request, loggedInUser, breadcrumbs, localhost){
 
 <button id="createBatchButton" type="button" class="btn btn-batch" data-toggle="tooltip"
     data-placement="bottom" title="Create a new batch of workers">

@@ -4,14 +4,15 @@ import com.google.common.collect.Lists;
 import daos.common.StudyDao;
 import daos.common.UserDao;
 import daos.common.worker.WorkerDao;
-import exceptions.gui.ForbiddenException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.ForbiddenException;
+import exceptions.gui.common.NotFoundException;
 import general.common.MessagesStrings;
 import models.common.Study;
 import models.common.User;
 import models.common.User.Role;
 import models.common.workers.JatosWorker;
 import models.gui.NewUserModel;
+import play.mvc.Http;
 import utils.common.HashUtils;
 
 import javax.inject.Inject;
@@ -141,10 +142,10 @@ public class UserService {
      * be set and if it's false it will be removed. Returns true if the user has
      * the role in the end - or false if he hasn't.
      */
-    public boolean changeAdminRole(String email, boolean adminRole)
+    public boolean changeAdminRole(Http.Request request, String email, boolean adminRole)
             throws NotFoundException, ForbiddenException {
         User user = retrieveUser(email);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         if (user.equals(loggedInUser)) {
             throw new ForbiddenException(
                     MessagesStrings.ADMIN_NOT_ALLOWED_TO_REMOVE_HIS_OWN_ADMIN_ROLE);

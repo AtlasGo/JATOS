@@ -68,7 +68,9 @@ public abstract class PublixHelpers {
      */
     public static boolean componentDone(ComponentResult componentResult) {
         ComponentState state = componentResult.getComponentState();
-        return ComponentState.FINISHED == state || ComponentState.ABORTED == state || ComponentState.FAIL == state
+		return ComponentState.FINISHED == state
+				|| ComponentState.ABORTED == state
+				|| ComponentState.FAIL == state
                 || ComponentState.RELOADED == state;
     }
 

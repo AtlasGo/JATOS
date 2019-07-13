@@ -3,25 +3,28 @@ package controllers.gui;
 import com.fasterxml.jackson.databind.JsonNode;
 import controllers.gui.actionannotations.AuthenticationAction.Authenticated;
 import controllers.gui.actionannotations.GuiAccessLoggingAction.GuiAccessLogging;
+import controllers.gui.actionannotations.RefreshSessionCookieAction;
+import controllers.gui.actionannotations.RefreshSessionCookieAction.RefreshSessionCookie;
 import daos.common.ComponentDao;
 import daos.common.ComponentResultDao;
 import daos.common.StudyDao;
-import exceptions.gui.BadRequestException;
-import exceptions.gui.ForbiddenException;
-import exceptions.gui.JatosGuiException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.ForbiddenException;
+import exceptions.gui.common.NotFoundException;
+import general.gui.Messages;
 import general.gui.RequestScopeMessaging;
 import models.common.Component;
 import models.common.ComponentResult;
 import models.common.Study;
 import models.common.User;
-import play.Logger;
-import play.Logger.ALogger;
 import play.db.jpa.Transactional;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
-import services.gui.*;
+import services.gui.AuthenticationService;
+import services.gui.BreadcrumbsService;
+import services.gui.Checker;
+import services.gui.ResultRemover;
 import utils.common.HttpUtils;
 import utils.common.JsonUtils;
 
@@ -38,25 +41,19 @@ import java.util.List;
 @Singleton
 public class ComponentResults extends Controller {
 
-    private static final ALogger LOGGER = Logger.of(ComponentResults.class);
-
-    private final JatosGuiExceptionThrower jatosGuiExceptionThrower;
-    private final Checker                  checker;
-    private final AuthenticationService    authenticationService;
-    private final BreadcrumbsService       breadcrumbsService;
-    private final ResultRemover            resultRemover;
-    private final JsonUtils                jsonUtils;
-    private final StudyDao                 studyDao;
-    private final ComponentDao             componentDao;
-    private final ComponentResultDao       componentResultDao;
+    private final Checker checker;
+    private final AuthenticationService authenticationService;
+    private final BreadcrumbsService breadcrumbsService;
+    private final ResultRemover resultRemover;
+    private final JsonUtils jsonUtils;
+    private final StudyDao studyDao;
+    private final ComponentDao componentDao;
+    private final ComponentResultDao componentResultDao;
 
     @Inject
-    ComponentResults(JatosGuiExceptionThrower jatosGuiExceptionThrower,
-            Checker checker, AuthenticationService authenticationService,
-            BreadcrumbsService breadcrumbsService, ResultRemover resultRemover,
-            JsonUtils jsonUtils, StudyDao studyDao, ComponentDao componentDao,
-            ComponentResultDao componentResultDao) {
-        this.jatosGuiExceptionThrower = jatosGuiExceptionThrower;
+    ComponentResults(Checker checker, AuthenticationService authenticationService,
+            BreadcrumbsService breadcrumbsService, ResultRemover resultRemover, JsonUtils jsonUtils, StudyDao studyDao,
+            ComponentDao componentDao, ComponentResultDao componentResultDao) {
         this.checker = checker;
         this.authenticationService = authenticationService;
         this.breadcrumbsService = breadcrumbsService;
@@ -72,52 +69,54 @@ public class ComponentResults extends Controller {
      */
     @Transactional
     @Authenticated
+    @RefreshSessionCookie
     public Result componentResults(Http.Request request, Long studyId, Long componentId, String errorMsg,
-            int httpStatus) throws JatosGuiException {
+            int httpStatus) {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStandardForComponents(studyId, componentId, component);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwHome(request, e, HttpUtils.isAjax(request));
+            return redirect(routes.Studies.study(studyId)).flashing(Messages.ERROR, e.getMessage());
         }
 
-        RequestScopeMessaging.error(errorMsg);
+        request = RequestScopeMessaging.error(request, errorMsg);
         String breadcrumbs = breadcrumbsService.generateForComponent(study, component, BreadcrumbsService.RESULTS);
         return status(httpStatus, views.html.gui.result.componentResults
-                .render(loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request), study, component));
+                .render(request, loggedInUser, breadcrumbs, HttpUtils.isLocalhost(request), study, component));
     }
 
     @Transactional
     @Authenticated
-    public Result componentResults(Http.Request request, Long studyId, Long componentId, String errorMsg)
-            throws JatosGuiException {
+    @RefreshSessionCookie
+    public Result componentResults(Http.Request request, Long studyId, Long componentId, String errorMsg) {
         return componentResults(request, studyId, componentId, errorMsg, Http.Status.OK);
     }
 
     @Transactional
     @Authenticated
-    public Result componentResults(Http.Request request, Long studyId, Long componentId) throws JatosGuiException {
+    @RefreshSessionCookie
+    public Result componentResults(Http.Request request, Long studyId, Long componentId) {
         return componentResults(request, studyId, componentId, null, Http.Status.OK);
     }
 
     /**
      * Ajax DELETE request
      * <p>
-     * Removes all ComponentResults specified in the parameter. The parameter is
-     * a comma separated list of of ComponentResult IDs as a String.
+     * Removes all ComponentResults specified in the parameter. The parameter is a comma separated list of of
+     * ComponentResult IDs as a String.
      */
     @Transactional
     @Authenticated
-    public Result remove(String componentResultIds) throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    public Result remove(Http.Request request, String componentResultIds) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         try {
             // Permission check is done in service for each result individually
             resultRemover.removeComponentResults(componentResultIds, loggedInUser);
         } catch (ForbiddenException | BadRequestException | NotFoundException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
         return ok(" "); // jQuery.ajax cannot handle empty responses
     }
@@ -129,22 +128,19 @@ public class ComponentResults extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result removeAllOfComponent(Http.Request request, Long studyId, Long componentId) throws JatosGuiException {
+    public Result removeAllOfComponent(Http.Request request, Long studyId, Long componentId) {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStandardForComponents(studyId, componentId, component);
-        } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwHome(request, e, HttpUtils.isAjax(request));
-        }
 
-        try {
             resultRemover.removeAllComponentResults(component, loggedInUser);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
+
         return ok(" "); // jQuery.ajax cannot handle empty responses
     }
 
@@ -155,21 +151,19 @@ public class ComponentResults extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result tableDataByComponent(Long studyId, Long componentId) throws JatosGuiException {
+    public Result tableDataByComponent(Http.Request request, Long studyId, Long componentId) {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
             checker.checkStandardForComponents(studyId, componentId, component);
         } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwAjax(e);
+            return status(HttpUtils.getHttpStatus(e), e.getMessage());
         }
 
-        List<ComponentResult> componentResultList =
-                componentResultDao.findAllByComponent(component);
-        JsonNode dataAsJson =
-                jsonUtils.allComponentResultsForUI(componentResultList);
+        List<ComponentResult> componentResultList = componentResultDao.findAllByComponent(component);
+        JsonNode dataAsJson = jsonUtils.allComponentResultsForUI(componentResultList);
         return ok(dataAsJson);
     }
 

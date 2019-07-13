@@ -1,57 +1,65 @@
 package general.gui;
 
-import general.common.RequestScope;
-import models.gui.Messages;
+import play.libs.typedmap.TypedKey;
+import play.mvc.Http;
 import utils.common.JsonUtils;
 
 /**
- * Passes on messages (info/warning/error/success) to the view. Uses RequestScope. JATOS has two
- * similar messaging services, this and FlashScopeMessaging. Difference to FlashScopeMessaging:
- * RequestScopeMessaging can have multiple messages for each kind (info/warning/error/success), but
- * it does not survive a redirect (according to Play's documentation, flash scope isn't reliable).
- * 
+ * Passes on messages (info/warning/error/success) to the view. Uses request attrs.
+ *
  * @author Kristian Lange
  */
 public class RequestScopeMessaging {
 
-	private static final String MESSAGES = "messages";
+    private static final TypedKey<Messages> MESSAGES = TypedKey.create("messages");
 
-	public static String getAsJson() {
-		Messages messages = ((Messages) RequestScope.get(MESSAGES));
-		return JsonUtils.asJson(messages);
-	}
+    public static String getAsJson(Http.Request request) {
+        Messages messages = null;
+        if (request.attrs().containsKey(MESSAGES)) {
+            messages = request.attrs().get(MESSAGES);
+        }
+        return JsonUtils.asJson(messages);
+    }
 
-	private static Messages getOrCreate() {
-		Messages messages = ((Messages) RequestScope.get(MESSAGES));
-		if (messages == null) {
-			messages = new Messages();
-			RequestScope.put(MESSAGES, messages);
-		}
-		return messages;
-	}
+    private static Http.Request getAttrsWithMessages(Http.Request request) {
+        if (!request.attrs().containsKey(MESSAGES)) {
+            Messages messages = new Messages();
+            return request.addAttr(MESSAGES, messages);
+        } else {
+            return request;
+        }
+    }
 
-	public static void error(String msg) {
-		if (msg != null) {
-			getOrCreate().error(msg);
-		}
-	}
+    public static Http.Request error(Http.Request request, String msg) {
+        if (msg != null) {
+            request = getAttrsWithMessages(request);
+            request.attrs().get(MESSAGES).error(msg);
+        }
+        return request;
+    }
 
-	public static void info(String msg) {
-		if (msg != null) {
-			getOrCreate().info(msg);
-		}
-	}
+    public static Http.Request info(Http.Request request, String msg) {
+        if (msg != null) {
+            request = getAttrsWithMessages(request);
+            request.attrs().get(MESSAGES).info(msg);
+        }
+        return request;
+    }
 
-	public static void warning(String msg) {
-		if (msg != null) {
-			getOrCreate().warning(msg);
-		}
-	}
+    public static Http.Request warning(Http.Request request, String msg) {
+        if (msg != null) {
+            request = getAttrsWithMessages(request);
+            request.attrs().get(MESSAGES).warning(msg);
+        }
+        return request;
+    }
 
-	public static void success(String msg) {
-		if (msg != null) {
-			getOrCreate().success(msg);
-		}
-	}
+    public static Http.Request success(Http.Request request, String msg) {
+        if (msg != null) {
+            request = getAttrsWithMessages(request);
+            request.attrs().get(MESSAGES).success(msg);
+        }
+        return request;
+    }
 
 }

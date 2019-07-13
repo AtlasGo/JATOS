@@ -128,9 +128,9 @@ public class IdCookieServiceTest {
         cookieList.add(idCookieTestHelper.buildCookie(idCookie2));
         testHelper.mockContext(cookieList);
 
-        assertThat(idCookieService.oneIdCookieHasThisStudyAssets("test_study_assets1")).isTrue();
-        assertThat(idCookieService.oneIdCookieHasThisStudyAssets("test_study_assets2")).isTrue();
-        assertThat(idCookieService.oneIdCookieHasThisStudyAssets("NOT_study_assets")).isFalse();
+        assertThat(idCookieService.hasOneIdCookieThisStudyAssets("test_study_assets1")).isTrue();
+        assertThat(idCookieService.hasOneIdCookieThisStudyAssets("test_study_assets2")).isTrue();
+        assertThat(idCookieService.hasOneIdCookieThisStudyAssets("NOT_study_assets")).isFalse();
     }
 
     /**
@@ -143,7 +143,7 @@ public class IdCookieServiceTest {
         List<Cookie> cookieList = new ArrayList<>();
         testHelper.mockContext(cookieList);
 
-        assertThat(idCookieService.oneIdCookieHasThisStudyAssets("test_study_assets")).isFalse();
+        assertThat(idCookieService.hasOneIdCookieThisStudyAssets("test_study_assets")).isFalse();
     }
 
     /**
@@ -208,7 +208,7 @@ public class IdCookieServiceTest {
         // Check that the old IdCookie for the study result ID 1l is overwritten
         IdCookieModel idCookie = idCookieService.getIdCookie(studyResult.getId());
         assertThat(idCookie).isNotNull();
-        assertThat(idCookieService.getIdCookieCollection().size()).isEqualTo(2);
+        assertThat(idCookieService.extract().size()).isEqualTo(2);
         assertThat(idCookie.getStudyAssets()).isEqualTo("basic_example_study");
     }
 
@@ -236,7 +236,7 @@ public class IdCookieServiceTest {
         // Check that a new IdCookie is written
         IdCookieModel idCookie = idCookieService.getIdCookie(studyResult.getId());
         assertThat(idCookie).isNotNull();
-        assertThat(idCookieService.getIdCookieCollection().size()).isEqualTo(3);
+        assertThat(idCookieService.extract().size()).isEqualTo(3);
     }
 
     /**

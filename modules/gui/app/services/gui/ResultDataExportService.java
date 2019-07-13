@@ -2,9 +2,9 @@ package services.gui;
 
 import daos.common.ComponentResultDao;
 import daos.common.StudyResultDao;
-import exceptions.gui.BadRequestException;
-import exceptions.gui.ForbiddenException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.ForbiddenException;
+import exceptions.gui.common.NotFoundException;
 import general.common.StudyLogger;
 import models.common.*;
 import models.common.workers.Worker;

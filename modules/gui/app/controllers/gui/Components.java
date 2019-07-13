@@ -2,13 +2,15 @@ package controllers.gui;
 
 import controllers.gui.actionannotations.AuthenticationAction.Authenticated;
 import controllers.gui.actionannotations.GuiAccessLoggingAction.GuiAccessLogging;
+import controllers.gui.actionannotations.RefreshSessionCookieAction;
 import daos.common.ComponentDao;
 import daos.common.StudyDao;
-import exceptions.gui.BadRequestException;
-import exceptions.gui.ForbiddenException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.ForbiddenException;
 import exceptions.gui.JatosGuiException;
 import general.common.Common;
 import general.common.MessagesStrings;
+import general.gui.Messages;
 import general.gui.RequestScopeMessaging;
 import models.common.Component;
 import models.common.Study;
@@ -34,17 +36,16 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
 
+import static controllers.gui.actionannotations.RefreshSessionCookieAction.*;
+
 /**
- * Controller that deals with all requests regarding Components within the JATOS
- * GUI.
+ * Controller that deals with all requests regarding Components within the JATOS GUI.
  *
  * @author Kristian Lange
  */
 @GuiAccessLogging
 @Singleton
 public class Components extends Controller {
-
-    private static final ALogger LOGGER = Logger.of(Components.class);
 
     public static final String EDIT_SUBMIT_NAME = "action";
     public static final String EDIT_SAVE = "save";
@@ -74,49 +75,42 @@ public class Components extends Controller {
     }
 
     /**
-     * Actually shows a single component. It uses a JatosWorker and redirects to
-     * Publix.startStudy().
+     * Actually shows a single component. It uses a JatosWorker and redirects to Publix.startStudy().
      */
     @Transactional
     @Authenticated
-    public Result runComponent(Request request, Long studyId, Long componentId, Long batchId)
-            throws JatosGuiException {
-        User loggedInUser = authenticationService.getLoggedInUser();
+    @RefreshSessionCookie
+    public Result runComponent(Request request, Long studyId, Long componentId, Long batchId) {
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Study study = studyDao.findById(studyId);
         Component component = componentDao.findById(componentId);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
-        } catch (ForbiddenException | BadRequestException e) {
-            jatosGuiExceptionThrower.throwHome(request, e, HttpUtils.isAjax(request));
-        }
-        try {
             checker.checkStandardForComponents(studyId, componentId, component);
-        } catch (BadRequestException e) {
-            jatosGuiExceptionThrower.throwStudy(request, e, studyId);
+        } catch (ForbiddenException | BadRequestException e) {
+            return redirect(routes.Studies.study(studyId)).flashing(Messages.ERROR, e.getMessage());
         }
 
         if (component.getHtmlFilePath() == null || component.getHtmlFilePath().trim().isEmpty()) {
             String errorMsg = MessagesStrings.htmlFilePathEmpty(componentId);
-            jatosGuiExceptionThrower.throwStudy(request, errorMsg, Http.Status.BAD_REQUEST, studyId);
+            return redirect(routes.Studies.study(studyId)).flashing(Messages.ERROR, errorMsg);
         }
-        request.session().adding("jatos_run", "RUN_COMPONENT_START");
-        request.session().adding("run_component_id", componentId.toString());
         // Redirect to jatos-publix: start study
         String startComponentUrl =
                 Common.getPlayHttpContext() + "publix/" + study.getId() + "/start?" + "batchId" + "=" + batchId + "&"
                         + "jatosWorkerId" + "=" + loggedInUser.getWorker().getId();
-        return redirect(startComponentUrl);
+        return redirect(startComponentUrl).addingToSession(request, "jatos_run", "RUN_COMPONENT_START").addingToSession(
+                request, "run_component_id", componentId.toString());
     }
 
     /**
-     * Ajax POST request: Handles the post request of the form to create a new
-     * Component.
+     * Ajax POST request: Handles the post request of the form to create a new Component.
      */
     @Transactional
     @Authenticated
     public Result submitCreated(Request request, Long studyId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         checkStudyAndLocked(request, studyId, study, loggedInUser);
 
         Form<ComponentProperties> form = formFactory.form(ComponentProperties.class).bindFromRequest(request);
@@ -134,9 +128,9 @@ public class Components extends Controller {
      */
     @Transactional
     @Authenticated
-    public Result properties(Long studyId, Long componentId) throws JatosGuiException {
+    public Result properties(Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         try {
             checker.checkStandardForStudy(study, studyId, loggedInUser);
@@ -150,13 +144,15 @@ public class Components extends Controller {
     }
 
     /**
+     * Ajax POST
+     *
      * Handles the post of the edit form.
      */
     @Transactional
     @Authenticated
     public Result submitEdited(Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         checkStudyAndLockedAndComponent(request, studyId, componentId, study, loggedInUser, component);
 
@@ -184,7 +180,7 @@ public class Components extends Controller {
     public Result toggleActive(Request request, Long studyId, Long componentId, Boolean active)
             throws JatosGuiException {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         checkStudyAndLockedAndComponent(request, studyId, componentId, study, loggedInUser, component);
 
@@ -203,13 +199,13 @@ public class Components extends Controller {
     @Authenticated
     public Result cloneComponent(Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         checkStudyAndLockedAndComponent(request, studyId, componentId, study, loggedInUser, component);
 
         Component clone = componentService.cloneWholeComponent(component);
         componentService.createAndPersistComponent(study, clone);
-        return ok(RequestScopeMessaging.getAsJson());
+        return ok(RequestScopeMessaging.getAsJson(request));
     }
 
     /**
@@ -221,13 +217,13 @@ public class Components extends Controller {
     @Authenticated
     public Result remove(Request request, Long studyId, Long componentId) throws JatosGuiException {
         Study study = studyDao.findById(studyId);
-        User loggedInUser = authenticationService.getLoggedInUser();
+        User loggedInUser = authenticationService.getLoggedInUser(request);
         Component component = componentDao.findById(componentId);
         checkStudyAndLockedAndComponent(request, studyId, componentId, study, loggedInUser, component);
 
         componentService.remove(component);
-        RequestScopeMessaging.success(MessagesStrings.COMPONENT_DELETED_BUT_FILES_NOT);
-        return ok(RequestScopeMessaging.getAsJson());
+        request = RequestScopeMessaging.success(request, MessagesStrings.COMPONENT_DELETED_BUT_FILES_NOT);
+        return ok(RequestScopeMessaging.getAsJson(request));
     }
 
     private void checkStudyAndLocked(Request request, Long studyId, Study study, User loggedInUser)

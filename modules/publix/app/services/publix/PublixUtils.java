@@ -3,6 +3,7 @@ package services.publix;
 import daos.common.*;
 import daos.common.worker.WorkerDao;
 import exceptions.publix.*;
+import exceptions.publix.*;
 import general.common.StudyLogger;
 import group.GroupAdministration;
 import models.common.*;
@@ -20,8 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Service class with functions that are common for all classes that extend
- * Publix and don't belong in a controller.
+ * Service class with functions that are common for all classes that extend Publix and don't belong in a controller.
  *
  * @author Kristian Lange
  */
@@ -57,8 +57,7 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Like {@link #retrieveWorker(Long)} but returns a concrete
-     * implementation of the abstract Worker class
+     * Like {@link #retrieveWorker(Long)} but returns a concrete implementation of the abstract Worker class
      */
     public abstract T retrieveTypedWorker(Long workerId) throws ForbiddenPublixException;
 
@@ -74,8 +73,7 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Start or restart a component. It either returns a newly started component
-     * or an exception but never null.
+     * Start or restart a component. It either returns a newly started component or an exception but never null.
      */
     public ComponentResult startComponent(Component component, StudyResult studyResult)
             throws ForbiddenReloadException {
@@ -92,8 +90,8 @@ public abstract class PublixUtils<T extends Worker> {
                     // Worker tried to reload a non-reloadable component -> end
                     // component and study with FAIL
                     finishComponentResult(lastComponentResult, ComponentState.FAIL);
-                    String errorMsg = PublixErrorMessages
-                            .componentNotAllowedToReload(studyResult.getStudy().getId(), component.getId());
+                    String errorMsg = PublixErrorMessages.componentNotAllowedToReload(studyResult.getStudy().getId(),
+                            component.getId());
                     throw new ForbiddenReloadException(errorMsg);
                 }
             } else {
@@ -112,9 +110,8 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Does everything to abort a study: ends the current component with state
-     * ABORTED, finishes all other Components that might still be open, deletes
-     * all result data and ends the study with state ABORTED and sets the given
+     * Does everything to abort a study: ends the current component with state ABORTED, finishes all other Components
+     * that might still be open, deletes all result data and ends the study with state ABORTED and sets the given
      * message as an abort message.
      */
     public void abortStudy(String message, StudyResult studyResult) {
@@ -140,15 +137,12 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Finishes a StudyResult (includes ComponentResults) and returns a confirmation code if it
-     * was successful.
+     * Finishes a StudyResult (includes ComponentResults) and returns a confirmation code if it was successful.
      *
-     * @param successful  If true finishes all ComponentResults, generates a
-     *                    confirmation code and set the StudyResult's and current ComponentResult's
-     *                    state to FINISHED. If false it sets both states to FAIL and doesn't
-     *                    generate a confirmation code.
-     * @param errorMsg    Will be set in the StudyResult. Can be null if no error
-     *                    happened.
+     * @param successful  If true finishes all ComponentResults, generates a confirmation code and set the StudyResult's
+     *                    and current ComponentResult's state to FINISHED. If false it sets both states to FAIL and
+     *                    doesn't generate a confirmation code.
+     * @param errorMsg    Will be set in the StudyResult. Can be null if no error happened.
      * @param studyResult A StudyResult
      * @return The confirmation code or null if it was unsuccessful
      */
@@ -165,8 +159,8 @@ public abstract class PublixUtils<T extends Worker> {
             componentState = ComponentState.FAIL;
             studyState = StudyState.FAIL;
         }
-        retrieveCurrentComponentResult(studyResult)
-                .ifPresent(componentResult -> componentResult.setComponentState(componentState));
+        retrieveCurrentComponentResult(studyResult).ifPresent(
+                componentResult -> componentResult.setComponentState(componentState));
         studyResult.setStudyState(studyState);
 
         finishAllComponentResults(studyResult);
@@ -180,21 +174,21 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     private void finishAllComponentResults(StudyResult studyResult) {
-        studyResult.getComponentResultList().stream()
-                .filter(componentResult -> !PublixHelpers.componentDone(componentResult))
-                .forEach(componentResult -> finishComponentResult(componentResult, ComponentState.FINISHED));
+        studyResult.getComponentResultList().stream().filter(
+                componentResult -> !PublixHelpers.componentDone(componentResult)).forEach(
+                componentResult -> finishComponentResult(componentResult, ComponentState.FINISHED));
     }
 
     /**
-     * Checks if the max number of ID cookies is reached and if yes finishes the oldest one with a
-     * state FAIL. This method should only be called during start of a study.
+     * Checks if the max number of ID cookies is reached and if yes finishes the oldest one with a state FAIL. This
+     * method should only be called during start of a study.
      */
-    public void finishOldestStudyResult() throws PublixException {
-        if (!idCookieService.maxIdCookiesReached()) {
-            return;
+    public Http.Request finishOldestStudyResult(Http.Request request) throws PublixException {
+        if (!idCookieService.maxIdCookiesReached(request)) {
+            return request;
         }
 
-        Long abandonedStudyResultId = idCookieService.getStudyResultIdFromOldestIdCookie();
+        Long abandonedStudyResultId = idCookieService.getStudyResultIdFromOldestIdCookie(request);
         if (abandonedStudyResultId != null) {
             StudyResult abandonedStudyResult = studyResultDao.findById(abandonedStudyResultId);
             // If the abandoned study result isn't done, finish it.
@@ -204,8 +198,10 @@ public abstract class PublixUtils<T extends Worker> {
                 studyLogger.log(abandonedStudyResult.getStudy(), "Finish abandoned study",
                         abandonedStudyResult.getWorker());
             }
-            idCookieService.discardIdCookie(abandonedStudyResultId);
+            request = idCookieService.discardIdCookie(request, abandonedStudyResultId);
         }
+
+        return request;
     }
 
     /**
@@ -253,8 +249,7 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Returns an Optional of the last ComponentResult of this studyResult but only if it's not
-     * 'done'.
+     * Returns an Optional of the last ComponentResult of this studyResult but only if it's not 'done'.
      */
     public Optional<ComponentResult> retrieveCurrentComponentResult(StudyResult studyResult) {
         Optional<ComponentResult> last = studyResult.getLastComponentResult();
@@ -266,9 +261,8 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Gets the current ComponentResult from the storage or if it doesn't exist
-     * yet starts one for the given component. The current ComponentResult
-     * doesn't have to be of the given Component.
+     * Gets the current ComponentResult from the storage or if it doesn't exist yet starts one for the given component.
+     * The current ComponentResult doesn't have to be of the given Component.
      */
     public ComponentResult retrieveStartedComponentResult(Component component, StudyResult studyResult)
             throws ForbiddenReloadException {
@@ -278,8 +272,8 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Returns the first component in the given study that is active. If there
-     * is no such component it throws a NotFoundPublixException.
+     * Returns the first component in the given study that is active. If there is no such component it throws a
+     * NotFoundPublixException.
      */
     public Component retrieveFirstActiveComponent(Study study) throws NotFoundPublixException {
         Optional<Component> component = study.getFirstComponent();
@@ -294,13 +288,13 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Returns an Optional to the next active component in the list of components that
-     * correspond to the ComponentResults of the given StudyResult.
+     * Returns an Optional to the next active component in the list of components that correspond to the
+     * ComponentResults of the given StudyResult.
      */
     public Optional<Component> retrieveNextActiveComponent(StudyResult studyResult)
             throws InternalServerErrorPublixException {
-        Component current = retrieveLastComponent(studyResult)
-                .orElseThrow(() -> new InternalServerErrorPublixException("Couldn't find the last running component."));
+        Component current = retrieveLastComponent(studyResult).orElseThrow(
+                () -> new InternalServerErrorPublixException("Couldn't find the last running component."));
         Optional<Component> next = studyResult.getStudy().getNextComponent(current);
         // Find next active component or null if study has no more components
         while (next.isPresent() && !next.get().isActive()) {
@@ -310,8 +304,7 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Returns the component with the given component ID that belongs to the
-     * given study.
+     * Returns the component with the given component ID that belongs to the given study.
      *
      * @param study       A Study
      * @param componentId The component's ID
@@ -352,8 +345,8 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Returns the study corresponding to the given study ID. It throws an
-     * NotFoundPublixException if there is no such study.
+     * Returns the study corresponding to the given study ID. It throws an NotFoundPublixException if there is no such
+     * study.
      */
     public Study retrieveStudy(Long studyId) throws NotFoundPublixException {
         Study study = studyDao.findById(studyId);
@@ -364,8 +357,7 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Checks if this component belongs to this study and throws an
-     * BadRequestPublixException if it doesn't.
+     * Checks if this component belongs to this study and throws an BadRequestPublixException if it doesn't.
      */
     public void checkComponentBelongsToStudy(Study study, Component component) throws BadRequestPublixException {
         if (!component.getStudy().equals(study)) {
@@ -384,9 +376,8 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Gets the batch with given ID from the database or if the batchId is -1
-     * returns the default batch of this study. If the batch doesn't exist it throws an
-     * NotFoundPublixException.
+     * Gets the batch with given ID from the database or if the batchId is -1 returns the default batch of this study.
+     * If the batch doesn't exist it throws an NotFoundPublixException.
      */
     public Batch retrieveBatchByIdOrDefault(Long batchId, Study study) throws NotFoundPublixException {
         if (batchId == -1) {
@@ -398,8 +389,7 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Retrieves batch from database. If the batch doesn't exist it throws an
-     * NotFoundPublixException.
+     * Retrieves batch from database. If the batch doesn't exist it throws an NotFoundPublixException.
      */
     public Batch retrieveBatch(Long batchId) throws NotFoundPublixException {
         Batch batch = batchDao.findById(batchId);
@@ -410,31 +400,31 @@ public abstract class PublixUtils<T extends Worker> {
     }
 
     /**
-     * Sets the StudyResult's StudyState to STARTED if the study is currently in
-     * state PRE and the study result moved away from the first active component (this
-     * means the given componentId isn't the first component's one).
+     * Sets the StudyResult's StudyState to STARTED if the study is currently in state PRE and the study result moved
+     * away from the first active component (this means the given componentId isn't the first component's one).
      */
     public void setPreStudyStateByComponentId(StudyResult studyResult, Study study, Long componentId)
             throws NotFoundPublixException {
-        if (studyResult.getStudyState() == StudyState.PRE && !retrieveFirstActiveComponent(study).getId()
-                .equals(componentId)) {
+        if (studyResult.getStudyState() == StudyState.PRE && !retrieveFirstActiveComponent(study).getId().equals(
+                componentId)) {
             studyResult.setStudyState(StudyState.STARTED);
         }
         studyResultDao.update(studyResult);
     }
 
     /**
-     * Gets the URL query parameters without the JATOS specific ones. Since the JATOS specific ones
-     * vary from worker to worker the method is defined in the worker-specific sub-classes.
+     * Gets the URL query parameters without the JATOS specific ones. Since the JATOS specific ones vary from worker to
+     * worker the method is defined in the worker-specific sub-classes.
      */
     protected abstract Map<String, String[]> getNonJatosUrlQueryParameters(Map<String, String[]> queryParameters);
 
     /**
-     * Get query string parameters from the calling URL and put them into the field
-     * urlQueryParameters in StudyResult as a JSON string.
+     * Get query string parameters from the calling URL and put them into the field urlQueryParameters in StudyResult as
+     * a JSON string.
      */
     public StudyResult setUrlQueryParameter(Map<String, String[]> queryParameters, StudyResult studyResult) {
-        String parameter = JsonUtils.asJson(getNonJatosUrlQueryParameters(queryParameters));
+        // Convert to HashMap since we get a weird Map from Play without remove method
+        String parameter = JsonUtils.asJson(getNonJatosUrlQueryParameters(new HashMap<>(queryParameters)));
         studyResult.setUrlQueryParameters(parameter);
         return studyResult;
     }

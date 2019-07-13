@@ -73,10 +73,10 @@ public class GeneralMultiplePublix extends Publix<GeneralMultipleWorker> impleme
         studyAuthorisation.checkWorkerAllowedToStartStudy(worker, study, batch);
         LOGGER.info(".startStudy: study (study ID " + studyId + ", batch ID " + batchId + ") "
                 + "assigned to worker with ID " + worker.getId());
-        publixUtils.finishOldestStudyResult();
+        request = publixUtils.finishOldestStudyResult(request);
         StudyResult studyResult = resultCreator.createStudyResult(study, batch, worker);
         publixUtils.setUrlQueryParameter(request.queryString(), studyResult);
-        idCookieService.writeIdCookie(worker, batch, studyResult);
+        idCookieService.writeIdCookie(request, worker, batch, studyResult);
         Component firstComponent = publixUtils.retrieveFirstActiveComponent(study);
         studyLogger.log(study, "Started study run with " + PersonalMultipleWorker.UI_WORKER_TYPE + " worker", batch,
                 worker);

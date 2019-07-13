@@ -3,7 +3,7 @@ package services.gui;
 import daos.common.BatchDao;
 import daos.common.StudyResultDao;
 import daos.common.worker.WorkerDao;
-import exceptions.gui.BadRequestException;
+import exceptions.gui.common.BadRequestException;
 import models.common.Batch;
 import models.common.Study;
 import models.common.workers.*;

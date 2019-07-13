@@ -1,4 +1,4 @@
-@(loggedInUser: common.User, breadcrumbs: String, localhost: Boolean)(body: Html)
+@(request: Http.Request, loggedInUser: common.User, breadcrumbs: String, localhost: Boolean)(body: Html)
 
 <!DOCTYPE html>
 
@@ -320,9 +320,9 @@ function getUIWorkerTypeWithGlyphicon(workerType) {
 @views.html.gui.study.studyPropertiesModal()
 
 <script>
-var messagesRequestScope = @Html(general.gui.RequestScopeMessaging.getAsJson());
+var messagesRequestScope = @Html(general.gui.RequestScopeMessaging.getAsJson(request));
 showMessages(messagesRequestScope);
-var messagesFlashScope = @Html(general.gui.FlashScopeMessaging.getAsJson());
+var messagesFlashScope = @Html(general.gui.Messages.getFlashAsJson(request.flash()));
 showMessages(messagesFlashScope);
 checkForIE();
 var breadcrumbs = @Html(breadcrumbs);

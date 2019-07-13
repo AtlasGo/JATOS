@@ -1,7 +1,7 @@
-@(loggedInUser: common.User, breadcrumbs: String, localhost: Boolean,
+@(request: Http.Request, loggedInUser: common.User, breadcrumbs: String, localhost: Boolean,
     study: common.Study, component: common.Component)
 
-@views.html.gui.main(loggedInUser, breadcrumbs, localhost){
+@views.html.gui.main(request, loggedInUser, breadcrumbs, localhost){
 
 <table id="componentResultsTable" class="table table-hover table-row-border" cellpadding="0" cellspacing="0" border="0" width="100%">
     <thead>

@@ -2,8 +2,8 @@ package services.gui;
 
 import daos.common.StudyDao;
 import daos.common.UserDao;
-import exceptions.gui.BadRequestException;
-import exceptions.gui.NotFoundException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.NotFoundException;
 import exceptions.publix.ForbiddenReloadException;
 import models.common.ComponentResult;
 import models.common.Study;

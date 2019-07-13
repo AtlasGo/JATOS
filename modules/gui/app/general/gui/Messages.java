@@ -1,18 +1,28 @@
-package models.gui;
+package general.gui;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import play.mvc.Http;
+import utils.common.JsonUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Model for messages (success, info, warning, error) used for JSON marshaling
- * and destined for JATOS' GUI views.
+ * Handling messages (success, info, warning, error) used used in JATOS' GUI views. JATOS has two similar messaging
+ * services, via Play's flash and via RequestScopeMessaging. Difference: flash has only one of each kind
+ * (info/warning/error/success), but it survives a redirect (according to Play's documentation, flash scope isn't
+ * reliable).
  *
  * @author Kristian Lange
  */
 public class Messages {
+
+    public static final String INFO = "info";
+    public static final String SUCCESS = "success";
+    public static final String ERROR = "error";
+    public static final String WARNING = "warning";
 
     @JsonInclude(Include.NON_NULL)
     private List<String> successList;
@@ -64,6 +74,15 @@ public class Messages {
         if (error == null) return;
         if (errorList == null) errorList = new ArrayList<>();
         errorList.add(error);
+    }
+
+    public static String getFlashAsJson(Http.Flash flash) {
+        Messages messages = new Messages();
+        flash.getOptional(INFO).ifPresent(messages::info);
+        flash.getOptional(SUCCESS).ifPresent(messages::success);
+        flash.getOptional(ERROR).ifPresent(messages::error);
+        flash.getOptional(WARNING).ifPresent(messages::warning);
+        return JsonUtils.asJson(messages);
     }
 
 }

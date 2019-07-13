@@ -6,6 +6,7 @@ import exceptions.publix.InternalServerErrorPublixException;
 import general.common.Common;
 import models.common.*;
 import models.common.workers.Worker;
+import play.mvc.Http;
 import services.publix.PublixErrorMessages;
 import services.publix.idcookie.exception.IdCookieAlreadyExistsException;
 import services.publix.idcookie.exception.IdCookieCollectionFullException;
@@ -13,13 +14,12 @@ import utils.common.HttpUtils;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.Collection;
 
 /**
- * Service class for JATOS ID cookie handling. It generates, extracts and
- * discards ID cookies. An ID cookie is used by the JATOS server to tell
- * jatos.js about several IDs the current study run has (e.g. worker ID, study
- * ID, study result ID). This cookie is created when the study run is started
- * and discarded when it's done.
+ * Service class for JATOS ID cookie handling. It generates, extracts and discards ID cookies. An ID cookie is used by
+ * the JATOS server to tell jatos.js about several IDs the current study run has (e.g. worker ID, study ID, study result
+ * ID). This cookie is created when the study run is started and discarded when it's done.
  *
  * @author Kristian Lange (2016)
  */
@@ -33,46 +33,26 @@ public class IdCookieService {
         this.idCookieAccessor = idCookieAccessor;
     }
 
-    public boolean hasIdCookie(Long studyResultId) throws InternalServerErrorPublixException {
-        return getIdCookieCollection().findWithStudyResultId(studyResultId) != null;
-    }
-
     /**
-     * Returns the IdCookie that corresponds to the given study result ID. If
-     * the cookie doesn't exist it throws a BadRequestPublixException.
+     * Returns the IdCookie that corresponds to the given study result ID. If the cookie doesn't exist it throws a
+     * BadRequestPublixException.
      */
-    public IdCookieModel getIdCookie(Long studyResultId)
-            throws BadRequestPublixException,
-            InternalServerErrorPublixException {
-        IdCookieModel idCookie = getIdCookieCollection()
-                .findWithStudyResultId(studyResultId);
+    public IdCookieModel getIdCookie(Http.RequestHeader request, Long studyResultId)
+            throws BadRequestPublixException {
+        IdCookieModel idCookie = request.attrs().get(IdCookieAccessor.ID_COOKIES).get(studyResultId);
         if (idCookie == null) {
-            throw new BadRequestPublixException(PublixErrorMessages
-                    .idCookieForThisStudyResultNotExists(studyResultId));
+            throw new BadRequestPublixException(PublixErrorMessages.idCookieForThisStudyResultNotExists(studyResultId));
         }
         return idCookie;
     }
 
     /**
-     * Returns the whole IdCookieCollection
+     * Returns true if the study assets of at least one ID cookie is equal to the given study assets. Otherwise returns
+     * false.
      */
-    IdCookieCollection getIdCookieCollection()
-            throws InternalServerErrorPublixException {
-        try {
-            return idCookieAccessor.extract();
-        } catch (IdCookieAlreadyExistsException e) {
-            // Should never happen or something is seriously wrong
-            throw new InternalServerErrorPublixException(e.getMessage());
-        }
-    }
-
-    /**
-     * Returns true if the study assets of at least one ID cookie is equal to
-     * the given study assets. Otherwise returns false.
-     */
-    public boolean oneIdCookieHasThisStudyAssets(String studyAssets)
-            throws InternalServerErrorPublixException {
-        for (IdCookieModel idCookie : getIdCookieCollection().getAll()) {
+    public boolean hasOneIdCookieThisStudyAssets(Http.Request request, String studyAssets) {
+        Collection<IdCookieModel> idCookies = request.attrs().get(IdCookieAccessor.ID_COOKIES).getAll();
+        for (IdCookieModel idCookie : idCookies) {
             if (idCookie.getStudyAssets().equals(studyAssets)) {
                 return true;
             }
@@ -81,92 +61,77 @@ public class IdCookieService {
     }
 
     /**
-     * Generates an ID cookie from the given parameters and sets it in the
-     * response object.
+     * Generates an ID cookie from the given parameters and sets it in the response object.
      */
-    public void writeIdCookie(Worker worker, Batch batch,
-            StudyResult studyResult) throws InternalServerErrorPublixException {
-        writeIdCookie(worker, batch, studyResult, null, null);
-    }
-
-    /**
-     * Generates an ID cookie from the given parameters and sets it in the
-     * response object.
-     */
-    public void writeIdCookie(Worker worker, Batch batch,
-            StudyResult studyResult, ComponentResult componentResult)
+    public Http.Request writeIdCookie(Http.Request request, Worker worker, Batch batch, StudyResult studyResult)
             throws InternalServerErrorPublixException {
-        writeIdCookie(worker, batch, studyResult, componentResult, null);
+        return writeIdCookie(request, worker, batch, studyResult, null, null);
     }
 
     /**
-     * Generates an ID cookie from the given parameters and sets it in the
-     * response object.
+     * Generates an ID cookie from the given parameters and sets it in the response object.
      */
-    public void writeIdCookie(Worker worker, Batch batch,
-            StudyResult studyResult, JatosRun jatosRun)
-            throws InternalServerErrorPublixException {
-        writeIdCookie(worker, batch, studyResult, null, jatosRun);
+    public Http.Request writeIdCookie(Http.Request request, Worker worker, Batch batch, StudyResult studyResult,
+            ComponentResult componentResult) throws InternalServerErrorPublixException {
+        return writeIdCookie(request, worker, batch, studyResult, componentResult, null);
     }
 
     /**
-     * Generates an ID cookie from the given parameters and sets it in the
-     * Response object. Checks if there is an existing ID cookie with the same
-     * study result ID and if so overwrites it. If there isn't it writes a new
-     * one. It expects a free spot in the cookie collection and if not throws an
-     * InternalServerErrorPublixException (should never happen). The deletion of
-     * the oldest cookie must have happened beforehand.
+     * Generates an ID cookie from the given parameters and sets it in the response object.
      */
-    public void writeIdCookie(Worker worker, Batch batch,
-            StudyResult studyResult, ComponentResult componentResult,
+    public Http.Request writeIdCookie(Http.Request request, Worker worker, Batch batch, StudyResult studyResult,
             JatosRun jatosRun) throws InternalServerErrorPublixException {
-        IdCookieCollection idCookieCollection = getIdCookieCollection();
+        return writeIdCookie(request, worker, batch, studyResult, null, jatosRun);
+    }
+
+    /**
+     * Generates an ID cookie from the given parameters and puts it in the IdCookieCollection. Checks if there is an
+     * existing ID cookie with the same study result ID and if so overwrites it. If there isn't it writes a new one. It
+     * expects a free spot in the cookie collection and if not throws an InternalServerErrorPublixException (should
+     * never happen). The deletion of the oldest cookie must have happened beforehand.
+     */
+    public Http.Request writeIdCookie(Http.Request request, Worker worker, Batch batch, StudyResult studyResult,
+            ComponentResult componentResult, JatosRun jatosRun) throws InternalServerErrorPublixException {
+        IdCookieCollection idCookieCollection = request.attrs().get(IdCookieAccessor.ID_COOKIES);
         try {
             String newIdCookieName;
 
             // Check if there is an existing IdCookie for this StudyResult
-            IdCookieModel existingIdCookie = idCookieCollection
-                    .findWithStudyResultId(studyResult.getId());
+            IdCookieModel existingIdCookie = idCookieCollection.get(studyResult.getId());
             if (existingIdCookie != null) {
                 newIdCookieName = existingIdCookie.getName();
             } else {
                 newIdCookieName = getNewIdCookieName(idCookieCollection);
             }
 
-            IdCookieModel newIdCookie = buildIdCookie(newIdCookieName, batch,
-                    studyResult, componentResult, worker, jatosRun);
+            IdCookieModel newIdCookie = buildIdCookie(newIdCookieName, batch, studyResult, componentResult, worker,
+                    jatosRun);
 
-            idCookieAccessor.write(newIdCookie);
-        } catch (IdCookieCollectionFullException
-                | IdCookieAlreadyExistsException e) {
+            return idCookieAccessor.write(request, newIdCookie);
+        } catch (IdCookieCollectionFullException e) {
             // Should never happen since we check in front
             throw new InternalServerErrorPublixException(e.getMessage());
         }
     }
 
     /**
-     * Generates the name for a new IdCookie: If the max number of IdCookies is
-     * reached it reuses the name of the oldest IdCookie. If not it creates a
-     * new name.
+     * Generates the name for a new IdCookie: If the max number of IdCookies is reached it reuses the name of the oldest
+     * IdCookie. If not it creates a new name.
      */
-    private String getNewIdCookieName(IdCookieCollection idCookieCollection)
-            throws IdCookieCollectionFullException {
+    private String getNewIdCookieName(IdCookieCollection idCookieCollection) throws IdCookieCollectionFullException {
         if (idCookieCollection.isFull()) {
-            throw new IdCookieCollectionFullException(
-                    PublixErrorMessages.IDCOOKIE_COLLECTION_FULL);
+            throw new IdCookieCollectionFullException(PublixErrorMessages.IDCOOKIE_COLLECTION_FULL);
         }
         int newIndex = idCookieCollection.getNextAvailableIdCookieIndex();
         return IdCookieModel.ID_COOKIE_NAME + "_" + newIndex;
     }
 
     /**
-     * Builds an IdCookie from the given parameters. It accepts null values for
-     * ComponentResult and GroupResult (stored in StudyResult). All others must
-     * not be null.
+     * Builds an IdCookie from the given parameters. It accepts null values for ComponentResult and GroupResult (stored
+     * in StudyResult). All others must not be null.
      */
-    private IdCookieModel buildIdCookie(String name, Batch batch,
-            StudyResult studyResult, ComponentResult componentResult,
-            Worker worker, JatosRun jatosRun) {
+    private IdCookieModel buildIdCookie(String name, Batch batch, StudyResult studyResult,
+            ComponentResult componentResult, Worker worker, JatosRun jatosRun) {
         IdCookieModel idCookie = new IdCookieModel();
         Study study = studyResult.getStudy();
 
@@ -198,39 +163,30 @@ public class IdCookieService {
     }
 
     /**
-     * Discards the ID cookie if the given study result ID is equal to the one
-     * in the cookie.
+     * Discards the ID cookie if the given study result ID is equal to the one in the cookie.
      */
-    public void discardIdCookie(Long studyResultId)
+    public Http.Request discardIdCookie(Http.Request request, Long studyResultId)
             throws InternalServerErrorPublixException {
         try {
-            idCookieAccessor.discard(studyResultId);
+            return idCookieAccessor.discard(request, studyResultId);
         } catch (IdCookieAlreadyExistsException e) {
             throw new InternalServerErrorPublixException(e.getMessage());
         }
     }
 
     /**
-     * Returns true if the max number of IdCookies have been reached and false
-     * otherwise.
+     * Returns true if the max number of IdCookies have been reached and false otherwise.
      */
-    public boolean maxIdCookiesReached()
-            throws InternalServerErrorPublixException {
-        try {
-            return idCookieAccessor.extract().isFull();
-        } catch (IdCookieAlreadyExistsException e) {
-            throw new InternalServerErrorPublixException(e.getMessage());
-        }
+    public boolean maxIdCookiesReached(Http.Request request) {
+        return request.attrs().get(IdCookieAccessor.ID_COOKIES).isFull();
     }
 
     /**
-     * Checks the creation time of each IdCookie in the given IdCookieCollection
-     * and returns the oldest one. Returns null if the IdCookieCollection is
-     * empty.
+     * Checks the creation time of each IdCookie in the given IdCookieCollection and returns the oldest one. Returns
+     * null if the IdCookieCollection is empty.
      */
-    public IdCookieModel getOldestIdCookie()
-            throws InternalServerErrorPublixException {
-        IdCookieCollection idCookieCollection = getIdCookieCollection();
+    public IdCookieModel getOldestIdCookie(Http.Request request) {
+        IdCookieCollection idCookieCollection = request.attrs().get(IdCookieAccessor.ID_COOKIES);
         Long oldest = Long.MAX_VALUE;
         IdCookieModel oldestIdCookie = null;
         for (IdCookieModel idCookie : idCookieCollection.getAll()) {
@@ -244,13 +200,11 @@ public class IdCookieService {
     }
 
     /**
-     * Checks the creation time of each IdCookie in the given IdCookieCollection
-     * and returns the study result ID of the oldest one. Returns null if the
-     * IdCookieCollection is empty.
+     * Checks the creation time of each IdCookie in the given IdCookieCollection and returns the study result ID of the
+     * oldest one. Returns null if the IdCookieCollection is empty.
      */
-    public Long getStudyResultIdFromOldestIdCookie()
-            throws InternalServerErrorPublixException {
-        IdCookieModel oldest = getOldestIdCookie();
+    public Long getStudyResultIdFromOldestIdCookie(Http.Request request) throws InternalServerErrorPublixException {
+        IdCookieModel oldest = getOldestIdCookie(request);
         return (oldest != null) ? oldest.getStudyResultId() : null;
     }
 

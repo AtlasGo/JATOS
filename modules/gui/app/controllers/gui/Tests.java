@@ -38,8 +38,8 @@ public class Tests extends Controller {
         this.cache = cache;
     }
 
-    public Result test() {
-        return ok(views.html.gui.test.render());
+    public Result test(Http.Request request) {
+        return ok(views.html.gui.test.render(request));
     }
 
     @Transactional

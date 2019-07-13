@@ -2,8 +2,8 @@ package services.gui;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import exceptions.gui.BadRequestException;
-import exceptions.gui.ForbiddenException;
+import exceptions.gui.common.BadRequestException;
+import exceptions.gui.common.ForbiddenException;
 import general.TestHelper;
 import general.common.MessagesStrings;
 import models.common.Component;

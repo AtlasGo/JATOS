@@ -1,6 +1,6 @@
-@(loggedInUser: common.User, breadcrumbs: String, localhost: Boolean, worker: common.workers.Worker)
+@(request: Http.Request, loggedInUser: common.User, breadcrumbs: String, localhost: Boolean, worker: common.workers.Worker)
 
-@views.html.gui.main(loggedInUser, breadcrumbs, localhost){
+@views.html.gui.main(request, loggedInUser, breadcrumbs, localhost){
 
 <!-- Worker Info Panel -->
 <div id="workerInfoPanel" class="panel panel-default">

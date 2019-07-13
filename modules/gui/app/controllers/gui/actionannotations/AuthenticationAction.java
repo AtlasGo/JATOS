@@ -4,13 +4,17 @@ import controllers.gui.Authentication;
 import controllers.gui.Home;
 import controllers.gui.actionannotations.AuthenticationAction.Authenticated;
 import general.common.Common;
-import general.common.RequestScope;
-import general.gui.FlashScopeMessaging;
+import general.gui.Messages;
 import general.gui.RequestScopeMessaging;
 import models.common.User;
 import models.common.User.Role;
 import play.Logger;
 import play.Logger.ALogger;
+import play.api.mvc.Session;
+import play.api.mvc.request.Cell;
+import play.api.mvc.request.LazyCell;
+import play.api.mvc.request.RequestAttrKey;
+import play.libs.typedmap.TypedKey;
 import play.mvc.Action;
 import play.mvc.Http;
 import play.mvc.Result;
@@ -24,6 +28,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -45,7 +51,7 @@ import java.util.concurrent.CompletionStage;
  * 4) Check if the session timed out. The time span is defined in the application.conf.
  *
  * 5) Check if the session timed out due to inactivity of the user. With each request by the user the time of last
- * activity gets refreshed in the session.
+ * activity gets refreshed in the session (in RefreshSessionCookieAction).
  *
  * 6) Check if the logged-in user has the proper Role needed to access this page. This Role is an optional parameter in
  * the @Authenticated annotation.
@@ -73,6 +79,8 @@ public class AuthenticationAction extends Action<Authenticated> {
 
     private static final ALogger LOGGER = Logger.of(AuthenticationAction.class);
 
+    public static final TypedKey<User> LOGGED_IN_USER = TypedKey.create("loggedInUser");
+
     private final Provider<Home> homeProvider;
     private final AuthenticationService authenticationService;
 
@@ -88,40 +96,34 @@ public class AuthenticationAction extends Action<Authenticated> {
         // retrieve the user from the database and put it into our RequestScope
         // since we need it later anyway. Storing it in the RequestScope now
         // saves us some database requests later.
-        User loggedInUser = authenticationService.getLoggedInUserBySessionCookie(request.session());
-        if (loggedInUser == null) {
-            authenticationService.clearSessionCookie(request.session());
+        Optional<User> loggedInUser = authenticationService.getLoggedInUserBySessionCookie(request.session());
+        if (!loggedInUser.isPresent()) {
             return callForbiddenDueToAuthentication(request, request.remoteAddress(), request.path());
         }
-        RequestScope.put(AuthenticationService.LOGGED_IN_USER, loggedInUser);
+        request = request.addAttr(LOGGED_IN_USER, loggedInUser.get());
 
         // Check user's session ID (only if not switched off in configuration)
-        if (Common.getUserSessionValidation() && !authenticationService
-                .isValidSessionId(request.session(), loggedInUser.getEmail(), request.remoteAddress())) {
-            authenticationService.clearSessionCookie(request.session());
-            return callForbiddenDueToInvalidSession(request, loggedInUser.getEmail(), request.remoteAddress(),
+        if (Common.getUserSessionValidation() && !authenticationService.isValidSessionId(request.session(),
+                loggedInUser.get().getEmail(), request.remoteAddress())) {
+            return callForbiddenDueToInvalidSession(request, loggedInUser.get().getEmail(), request.remoteAddress(),
                     request.path());
         }
 
         // Check session timeout
         if (authenticationService.isSessionTimeout(request.session())) {
-            authenticationService.clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(),
-                    request.remoteAddress());
-            return callForbiddenDueToSessionTimeout(request, loggedInUser.getEmail());
+            authenticationService.clearUserSessionCache(loggedInUser.get().getEmail(), request.remoteAddress());
+            return callForbiddenDueToSessionTimeout(request, loggedInUser.get().getEmail());
         }
 
         // Check inactivity timeout
         if (authenticationService.isInactivityTimeout(request.session())) {
-            authenticationService.clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(),
-                    request.remoteAddress());
-            return callForbiddenDueToInactivityTimeout(request, loggedInUser.getEmail());
+            authenticationService.clearUserSessionCache(loggedInUser.get().getEmail(), request.remoteAddress());
+            return callForbiddenDueToInactivityTimeout(request, loggedInUser.get().getEmail());
         }
 
-        authenticationService.refreshSessionCookie(request.session());
-
         // Check authorization
-        if (!isAuthorized(loggedInUser)) {
-            return callForbiddenDueToAuthorization(request, loggedInUser.getEmail(), request.path());
+        if (!isAuthorized(loggedInUser.get())) {
+            return callForbiddenDueToAuthorization(request, loggedInUser.get().getEmail(), request.path());
         }
 
         // Everything ok: authenticated and authorized
@@ -138,12 +140,14 @@ public class AuthenticationAction extends Action<Authenticated> {
             String urlPath) {
         LOGGER.warn("Authentication failed: remote address " + remoteAddress + " tried to access page " + urlPath);
         if (HttpUtils.isAjax(request)) {
-            return CompletableFuture.completedFuture(forbidden("Not logged in"));
+            return CompletableFuture.completedFuture(forbidden("Not logged in").withNewSession());
         }
+        Http.Flash flash = request.flash();
         if (!urlPath.isEmpty() && !urlPath.matches("(/|/jatos|/jatos/)")) {
-            FlashScopeMessaging.error("You are not allowed to access this page. Please log in.");
+            flash.adding(Messages.ERROR, "You are not allowed to access this page. Please log in.");
         }
-        return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login()));
+        return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login())
+                .withNewSession().withFlash(flash));
     }
 
     private CompletionStage<Result> callForbiddenDueToInvalidSession(Http.Request request, String userEmail,
@@ -151,30 +155,31 @@ public class AuthenticationAction extends Action<Authenticated> {
         LOGGER.warn("Invalid session: user " + userEmail + " tried to access page " + urlPath + " from remote address "
                 + remoteAddress + ".");
         if (HttpUtils.isAjax(request)) {
-            return CompletableFuture.completedFuture(forbidden("Invalid session"));
+            return CompletableFuture.completedFuture(forbidden("Invalid session").withNewSession());
         } else {
-            FlashScopeMessaging.warning("You have been logged out.");
-            return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login()));
+            return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login())
+                    .withNewSession().flashing(Messages.WARNING, "You have been logged out."));
         }
     }
 
     private CompletionStage<Result> callForbiddenDueToSessionTimeout(Http.Request request, String userEmail) {
         LOGGER.info("Session of user " + userEmail + " has expired and the user has been logged out.");
         if (HttpUtils.isAjax(request)) {
-            return CompletableFuture.completedFuture(forbidden("Session timeout"));
+            return CompletableFuture.completedFuture(forbidden("Session timeout").withNewSession());
         } else {
-            FlashScopeMessaging.success("Your session has expired. You have been logged out.");
-            return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login()));
+            return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login())
+                    .withNewSession()
+                    .flashing(Messages.SUCCESS, "Your session has expired. You have been logged out."));
         }
     }
 
     private CompletionStage<Result> callForbiddenDueToInactivityTimeout(Http.Request request, String userEmail) {
         LOGGER.info("User " + userEmail + " has been logged out due to inactivity.");
         if (HttpUtils.isAjax(request)) {
-            return CompletableFuture.completedFuture(forbidden("Inactivity timeout"));
+            return CompletableFuture.completedFuture(forbidden("Inactivity timeout").withNewSession());
         } else {
-            FlashScopeMessaging.success("You have been logged out due to inactivity.");
-            return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login()));
+            return CompletableFuture.completedFuture(redirect(controllers.gui.routes.Authentication.login())
+                    .withNewSession().flashing(Messages.SUCCESS, "You have been logged out due to inactivity."));
         }
     }
 
@@ -185,7 +190,7 @@ public class AuthenticationAction extends Action<Authenticated> {
         if (HttpUtils.isAjax(request)) {
             return CompletableFuture.completedFuture(forbidden(message));
         } else {
-            RequestScopeMessaging.error(message);
+            request = RequestScopeMessaging.error(request, message);
             return CompletableFuture.completedFuture(homeProvider.get().home(request, Http.Status.FORBIDDEN));
         }
     }

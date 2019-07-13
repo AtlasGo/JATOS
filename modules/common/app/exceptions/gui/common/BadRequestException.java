@@ -1,4 +1,4 @@
-package exceptions.gui;
+package exceptions.gui.common;
 
 @SuppressWarnings("serial")
 public class BadRequestException extends Exception {

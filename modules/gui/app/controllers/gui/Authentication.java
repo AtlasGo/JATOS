@@ -3,7 +3,7 @@ package controllers.gui;
 import controllers.gui.actionannotations.AuthenticationAction.Authenticated;
 import controllers.gui.actionannotations.GuiAccessLoggingAction.GuiAccessLogging;
 import general.common.MessagesStrings;
-import general.gui.FlashScopeMessaging;
+import general.gui.Messages;
 import models.common.User;
 import play.Logger;
 import play.Logger.ALogger;
@@ -11,6 +11,7 @@ import play.data.Form;
 import play.data.FormFactory;
 import play.db.jpa.Transactional;
 import play.mvc.Controller;
+import play.mvc.Http;
 import play.mvc.Http.Request;
 import play.mvc.Result;
 import services.gui.AuthenticationService;
@@ -43,8 +44,8 @@ public class Authentication extends Controller {
     /**
      * Shows the login page
      */
-    public Result login() {
-        return ok(views.html.gui.auth.login.render(formFactory.form(Authentication.Login.class)));
+    public Result login(Request request) {
+        return ok(views.html.gui.auth.login.render(request, formFactory.form(Authentication.Login.class)));
     }
 
     /**
@@ -61,12 +62,12 @@ public class Authentication extends Controller {
         } else if (!authenticationService.authenticate(email, password)) {
             return returnBadRequestDueToFailedAuth(request, loginForm, email);
         } else {
-            authenticationService
-                    .writeSessionCookieAndUserSessionCache(request.session(), email, request.remoteAddress());
+            Http.Session session = authenticationService.writeSessionCookieAndUserSessionCache(request.session(), email,
+                    request.remoteAddress());
             if (HttpUtils.isAjax(request)) {
-                return ok(" "); // jQuery.ajax cannot handle empty responses
+                return ok(" ").withSession(session); // jQuery.ajax cannot handle empty responses
             } else {
-                return redirect(controllers.gui.routes.Home.home());
+                return redirect(controllers.gui.routes.Home.home()).withSession(session);
             }
         }
     }
@@ -77,8 +78,8 @@ public class Authentication extends Controller {
         if (HttpUtils.isAjax(request)) {
             return badRequest(MessagesStrings.FAILED_THREE_TIMES);
         } else {
-            return badRequest(
-                    views.html.gui.auth.login.render(loginForm.withGlobalError(MessagesStrings.FAILED_THREE_TIMES)));
+            return badRequest(views.html.gui.auth.login
+                    .render(request, loginForm.withGlobalError(MessagesStrings.FAILED_THREE_TIMES)));
         }
     }
 
@@ -88,7 +89,7 @@ public class Authentication extends Controller {
             return badRequest(MessagesStrings.INVALID_USER_OR_PASSWORD);
         } else {
             return badRequest(views.html.gui.auth.login
-                    .render(loginForm.withGlobalError(MessagesStrings.INVALID_USER_OR_PASSWORD)));
+                    .render(request, loginForm.withGlobalError(MessagesStrings.INVALID_USER_OR_PASSWORD)));
         }
     }
 
@@ -99,11 +100,10 @@ public class Authentication extends Controller {
     @Authenticated
     public Result logout(Request request) {
         LOGGER.info(".logout: " + request.session().getOptional(AuthenticationService.SESSION_USER_EMAIL).get());
-        User loggedInUser = authenticationService.getLoggedInUser();
-        authenticationService.clearSessionCookieAndUserSessionCache(request.session(), loggedInUser.getEmail(),
-                request.remoteAddress());
-        FlashScopeMessaging.success("You've been logged out.");
-        return redirect(controllers.gui.routes.Authentication.login());
+        User loggedInUser = authenticationService.getLoggedInUser(request);
+        authenticationService.clearUserSessionCache(loggedInUser.getEmail(), request.remoteAddress());
+        return redirect(controllers.gui.routes.Authentication.login()).withNewSession().flashing(Messages.SUCCESS,
+                "You've been logged out.");
     }
 
     /**

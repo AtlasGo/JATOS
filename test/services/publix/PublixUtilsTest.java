@@ -5,6 +5,7 @@ import com.google.inject.Injector;
 import daos.common.*;
 import daos.common.worker.WorkerDao;
 import exceptions.publix.*;
+import exceptions.publix.*;
 import general.TestHelper;
 import models.common.*;
 import models.common.ComponentResult.ComponentState;
@@ -20,6 +21,7 @@ import play.Environment;
 import play.db.jpa.JPAApi;
 import play.inject.guice.GuiceApplicationBuilder;
 import play.inject.guice.GuiceApplicationLoader;
+import play.mvc.Http;
 import play.mvc.Http.Cookie;
 import services.gui.BatchService;
 import services.gui.StudyService;
@@ -440,14 +442,14 @@ public abstract class PublixUtilsTest<T extends Worker> {
      * be more than the max allowed number of ID cookies).
      */
     @Test
-    public void checkFinishOldestStudyResultMoreThanAllowed()
+    public void checkFinishOldestStudyResultMoreThanAllowed(Http.Request request)
             throws InternalServerErrorPublixException, BadRequestPublixException {
         List<Cookie> cookieList = generateIdCookieList(IdCookieCollection.MAX_ID_COOKIES + 1);
         testHelper.mockContext(cookieList);
 
         jpaApi.withTransaction(() -> {
             try {
-                publixUtils.finishOldestStudyResult();
+                publixUtils.finishOldestStudyResult(request.cookies());
             } catch (PublixException e) {
                 throw new RuntimeException(e);
             }
@@ -455,7 +457,7 @@ public abstract class PublixUtilsTest<T extends Worker> {
 
         // Check that oldest Id cookie is gone (the one with ID 1l)
         try {
-            idCookieService.getIdCookie(1L);
+            idCookieService.getIdCookie(request.cookies(), 1L);
             Fail.fail();
         } catch (BadRequestPublixException e) {
             // just throwing the exception is enough

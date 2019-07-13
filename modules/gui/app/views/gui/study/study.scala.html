@@ -1,6 +1,6 @@
-@(loggedInUser: common.User, breadcrumbs: String, localhost: Boolean, study: common.Study, studyResultsCount: Integer)
+@(request: Http.Request, loggedInUser: common.User, breadcrumbs: String, localhost: Boolean, study: common.Study, studyResultsCount: Integer)
 
-@views.html.gui.main(loggedInUser, breadcrumbs, localhost){
+@views.html.gui.main(request, loggedInUser, breadcrumbs, localhost){
 
 <div id="studyDescription" class="panel panel-default" hidden>
     <div class="panel-body">

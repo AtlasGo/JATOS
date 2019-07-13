@@ -3,6 +3,7 @@ package controllers.publix
 import java.io.{File, IOException}
 
 import daos.common.{ComponentDao, StudyDao}
+import exceptions.publix.{ForbiddenPublixException, NotFoundPublixException}
 import exceptions.publix.{ForbiddenPublixException, NotFoundPublixException, PublixException}
 import general.common.{Common, MessagesStrings}
 import javax.inject.{Inject, Singleton}
@@ -67,7 +68,7 @@ class StudyAssets @Inject()(components: ControllerComponents, ioUtils: IOUtils, 
     //    play.mvc.Http.Context.current.set(play.core.j.JavaHelpers.createJavaContext(request, JavaHelpers.createContextComponents()))
 
     try {
-      checkProperAssets(urlPath)
+      checkProperAssets(request, urlPath)
       val filePath = urlPath.replace(URL_PATH_SEPARATOR, File.separator)
       val file = ioUtils.getExistingFileSecurely(Common.getStudyAssetsRootPath, filePath)
       logger.debug(s".viaAssetsPath: loading file ${file.getPath}.")
@@ -99,13 +100,13 @@ class StudyAssets @Inject()(components: ControllerComponents, ioUtils: IOUtils, 
     * assets.
     */
   @throws[PublixException]
-  private def checkProperAssets(urlPath: String): Unit = {
+  private def checkProperAssets(request: Request[AnyContent], urlPath: String): Unit = {
     val filePathArray = urlPath.split(URL_PATH_SEPARATOR)
     if (filePathArray.isEmpty)
       throw new ForbiddenPublixException(
         PublixErrorMessages.studyAssetsNotAllowedOutsideRun(urlPath))
     val studyAssets = filePathArray(0)
-    if (!idCookieService.oneIdCookieHasThisStudyAssets(studyAssets))
+    if (!idCookieService.hasOneIdCookieThisStudyAssets(request.asJava, studyAssets))
       throw new ForbiddenPublixException(
         PublixErrorMessages.studyAssetsNotAllowedOutsideRun(urlPath))
   }
